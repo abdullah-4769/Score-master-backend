@@ -18,14 +18,84 @@ model User {
   language  String?
   phone     String?
   createdAt DateTime @default(now())
+  gameFormats GameFormat[]
+  roleId     Int
+  role       Role     @relation(fields: [roleId], references: [id])
+
 }
 
 
 model Role {
   id          Int      @id @default(autoincrement())
   title       String
+   key         String   @unique
   description String?
   icon        String?
   file        String?  // Optional file path
   createdAt   DateTime @default(now())
+  users       User[]  
 }
+
+
+model GameFormat {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  isPublished Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // relation to User (Admin who created it)
+  createdById Int
+  createdBy   User      @relation(fields: [createdById], references: [id])
+ phases    Phase[] 
+}
+
+
+
+
+model Phase {
+  id            String      @id @default(uuid())
+  gameFormatId  Int         // must match GameFormat.id type
+  name          String
+  description   String?
+  order         Int
+  scoringType   ScoringType
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  gameFormat    GameFormat  @relation(fields: [gameFormatId], references: [id])
+  questions     Question[]  // this is the back-relation to Question
+
+  @@unique([gameFormatId, order]) // Order must be unique inside a format
+  @@index([gameFormatId])
+}
+
+model Question {
+  id            String        @id @default(uuid())
+  phaseId       String
+  type          QuestionType
+  questionText  String
+  scoringRubric Json
+  order         Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  phase         Phase   @relation(fields: [phaseId], references: [id]) // link back to Phase
+
+  @@unique([phaseId, order])
+  @@index([phaseId])
+}
+
+enum ScoringType {
+  AUTOMATIC
+  MANUAL
+}
+
+enum QuestionType {
+  OPEN_ENDED
+  MULTIPLE_CHOICE
+}
+
+

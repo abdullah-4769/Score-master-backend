@@ -1,0 +1,57 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from 'src/lib/prisma/prisma.service';
+import { CreateGameFormatDto } from './dto/create-game-format.dto';
+import { UpdateGameFormatDto } from './dto/update-game-format.dto';
+
+@Injectable()
+export class GameFormatService {
+  constructor(private prisma: PrismaService) {}
+
+ async create(dto: CreateGameFormatDto) {
+    return this.prisma.gameFormat.create({
+      data: {
+        name: dto.name,
+        description: dto.description,
+        createdById: dto.createdById, // comes from request body
+      },
+    });
+  }
+
+  async findAll() {
+    return this.prisma.gameFormat.findMany({
+      where: { isActive: true },
+      include: { createdBy: true },
+    });
+  }
+
+  async findOne(id: number) {
+    const format = await this.prisma.gameFormat.findUnique({
+      where: { id },
+      include: { createdBy: true },
+    });
+    if (!format) throw new NotFoundException('Game format not found');
+    return format;
+  }
+
+  async update(id: number, dto: UpdateGameFormatDto) {
+    return this.prisma.gameFormat.update({
+      where: { id },
+      data: dto,
+    });
+  }
+
+  async remove(id: number) {
+    // soft delete
+    return this.prisma.gameFormat.update({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
+
+  async publish(id: number) {
+    return this.prisma.gameFormat.update({
+      where: { id },
+      data: { isPublished: true },
+    });
+  }
+}
