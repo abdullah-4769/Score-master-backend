@@ -10,48 +10,50 @@ generator client {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String
-  password  String
-  
-  language  String?
-  phone     String?
-  createdAt DateTime @default(now())
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  name       String
+  password   String
+  language   String?
+  phone      String?
+  createdAt  DateTime  @default(now())
   gameFormats GameFormat[]
-  roleId     Int
-  role       Role     @relation(fields: [roleId], references: [id])
-
+  roleId     Int       // must be Int for numeric IDs
+  sessions  Session[]
+  joinedSessions PlayerSession[]
 }
 
 
 model Role {
   id          Int      @id @default(autoincrement())
   title       String
-   key         String   @unique
   description String?
   icon        String?
-  file        String?  // Optional file path
-  createdAt   DateTime @default(now())
-  users       User[]  
+  file        String?
+ 
 }
+
+
 
 
 model GameFormat {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  isPublished Boolean   @default(false)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id           Int       @id @default(autoincrement())
+  name         String
+  description  String?
+  mode         String
+  totalPhases  Int
+  timeDuration Int
+  isPublished  Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  // relation to User (Admin who created it)
-  createdById Int
-  createdBy   User      @relation(fields: [createdById], references: [id])
- phases    Phase[] 
+  createdById  Int
+  createdBy    User      @relation(fields: [createdById], references: [id])
+
+  phases       Phase[]
+  sessions  Session[]
 }
-
 
 
 
@@ -64,38 +66,114 @@ model Phase {
   scoringType   ScoringType
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  stages        Int         // number of stages in the phase
+  timeDuration  Int         // duration in minutes, you can adjust type if needed
 
   gameFormat    GameFormat  @relation(fields: [gameFormatId], references: [id])
-  questions     Question[]  // this is the back-relation to Question
+  questions     Question[]  // back-relation to Question
 
   @@unique([gameFormatId, order]) // Order must be unique inside a format
   @@index([gameFormatId])
 }
 
+enum ScoringType {
+  AUTOMATIC
+  MANUAL
+  HYBRID
+}
+
+
 model Question {
   id            String        @id @default(uuid())
   phaseId       String
   type          QuestionType
-  questionText  String
-  scoringRubric Json
-  order         Int
+  questionText  String?       // optional so type can be added first
+  scoringRubric Json?         // optional at first
+  order         Int?          // optional at first
+  point         Int?          // new field, optional at first
+  mcqOptions    Json?         // new optional field for MCQ options
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  phase         Phase   @relation(fields: [phaseId], references: [id]) // link back to Phase
+  phase         Phase   @relation(fields: [phaseId], references: [id])
 
   @@unique([phaseId, order])
   @@index([phaseId])
 }
 
-enum ScoringType {
-  AUTOMATIC
-  MANUAL
+enum QuestionType {
+  MCQ
+  OPEN_ENDED
+  PUZZLE
+  SIMULATION
 }
 
-enum QuestionType {
-  OPEN_ENDED
-  MULTIPLE_CHOICE
+
+
+
+
+
+model PlayerCapability {
+  id              Int      @id @default(autoincrement())
+  FormatId    Int
+
+  minPlayers      Int
+  maxPlayers      Int
+  badgeNames      Json?     // array of badge names, e.g. ["Gold", "Silver"]
+
+  requireAllTrue  Boolean   @default(false)
+  aiScoring       Boolean   @default(false)
+  allowLaterJoin  Boolean   @default(true)
+  sendInvitation  Boolean   @default(false)
+  recordSession   Boolean   @default(false)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+
+}
+
+
+
+
+model Session {
+  id           Int          @id @default(autoincrement())
+  gameFormatId Int
+  gameFormat   GameFormat   @relation(fields: [gameFormatId], references: [id])
+
+  createdById  Int
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  joinCode     String       @unique
+  status       SessionStatus @default(PENDING)
+
+  duration     Int
+  elapsedTime  Int          @default(0)
+
+  startedAt    DateTime?
+  pausedAt     DateTime?
+  endedAt      DateTime?
+  players     PlayerSession[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+enum SessionStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+
+
+model PlayerSession {
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  session   Session  @relation(fields: [sessionId], references: [id])
+  playerId  Int
+  player    User     @relation(fields: [playerId], references: [id])
+  joinedAt  DateTime @default(now())
 }
 
 

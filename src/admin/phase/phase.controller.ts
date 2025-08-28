@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get,ParseIntPipe, Param, Post, Put } from '@nestjs/common';
+// phase.controller.ts
+import { Body, Controller, Delete, Get, ParseIntPipe, Param, Post, Put } from '@nestjs/common';
 import { PhaseService } from './phase.service';
 import { CreatePhaseDto } from './dto/create-phase.dto';
 import { UpdatePhaseDto } from './dto/update-phase.dto';
@@ -32,13 +33,8 @@ export class PhaseController {
     return this.phaseService.remove(id);
   }
 
-
-@Delete('game-format/:formatId')
-  async removeByFormat(
-    @Param('formatId', ParseIntPipe) formatId: number
-  ) {
+  @Delete('game-format/:formatId')
+  removeByFormat(@Param('formatId', ParseIntPipe) formatId: number) {
     return this.phaseService.removeByFormat(formatId);
   }
-
-
 }

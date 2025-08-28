@@ -1,5 +1,5 @@
 // src/admin/game-format/dto/create-game-format.dto.ts
-import { IsInt, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString } from 'class-validator';
 
 export class CreateGameFormatDto {
   @IsString()
@@ -9,6 +9,23 @@ export class CreateGameFormatDto {
   @IsString()
   description?: string;
 
+  @IsString()
+  mode: string;
+
   @IsInt()
-  createdById: number; // Admin ID will come from body
+  totalPhases: number;
+
+  @IsInt()
+  timeDuration: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isPublished?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isActive?: boolean;
+
+  @IsInt()
+  createdById: number;
 }

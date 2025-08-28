@@ -6,12 +6,20 @@ import { RoleModule } from './role/role.module';
 import { GameFormatModule } from './admin/game-format/game-format.module';
 import { QuestionModule } from './admin/question/question.module';
 import { PhaseModule } from './admin/phase/phase.module';
+import { PlayerCapabilityModule } from './admin/player-capability/player-capability.module'
+import { SessionModule } from './session/session.module';
+
+
+
 @Module({
   imports: [AuthModule,
      RoleModule,
      GameFormatModule,
      PhaseModule,
-     QuestionModule],
+     QuestionModule,
+    PlayerCapabilityModule,
+    SessionModule
+    ],
   providers: [PrismaService, JwtService],
 })
 export class AppModule {}

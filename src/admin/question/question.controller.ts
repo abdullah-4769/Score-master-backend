@@ -1,33 +1,39 @@
 import { Controller, Post, Get, Param, Body, Patch, Delete } from '@nestjs/common'
 import { QuestionService } from './question.service'
-import { CreateQuestionDto} from './dto/create-question.dto'
-import {  UpdateQuestionDto } from './dto/update-question.dto'
+import { CreateQuestionDto } from './dto/create-question.dto'
+import { UpdateQuestionDto } from './dto/update-question.dto'
+
 @Controller('questions')
 export class QuestionController {
   constructor(private readonly service: QuestionService) {}
 
+  // Create placeholder or full question
   @Post()
-  create(@Body() dto: CreateQuestionDto) {
-    return this.service.create(dto)
+  async create(@Body() dto: CreateQuestionDto) {
+    return await this.service.create(dto)
   }
 
+  // Get all questions for a specific phase
   @Get('phase/:phaseId')
-  findAll(@Param('phaseId') phaseId: string) {
-    return this.service.findAll(phaseId)
+  async findAll(@Param('phaseId') phaseId: string) {
+    return await this.service.findAll(phaseId)
   }
 
+  // Get a single question by ID
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.service.findOne(id)
+  async findOne(@Param('id') id: string) {
+    return await this.service.findOne(id)
   }
 
+  // Update an existing question
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateQuestionDto) {
-    return this.service.update(id, dto)
+  async update(@Param('id') id: string, @Body() dto: UpdateQuestionDto) {
+    return await this.service.update(id, dto)
   }
 
+  // Delete a question
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.service.remove(id)
+  async remove(@Param('id') id: string) {
+    return await this.service.remove(id)
   }
 }

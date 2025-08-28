@@ -1,35 +1,34 @@
+// phase.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../lib/prisma/prisma.service';
 import { CreatePhaseDto } from './dto/create-phase.dto';
 import { UpdatePhaseDto } from './dto/update-phase.dto';
-
+import { ScoringType } from '@prisma/client';
 @Injectable()
 export class PhaseService {
   constructor(private prisma: PrismaService) {}
 
-  // Create phase
-  async create(dto: CreatePhaseDto) {
-    return this.prisma.phase.create({
-      data: {
-        name: dto.name,
-        description: dto.description,
-        order: dto.order,
-        scoringType: dto.scoringType,
-        gameFormat: {
-          connect: { id: dto.gameFormatId }, // connect to existing GameFormat
-        },
-      },
-    });
-  }
+async create(dto: CreatePhaseDto) {
+  return this.prisma.phase.create({
+    data: {
+      name: dto.name,
+      description: dto.description,
+      order: dto.order,
+      scoringType: dto.scoringType || ScoringType.AUTOMATIC,
+      stages: dto.stages,
+      timeDuration: dto.timeDuration,
+      gameFormat: { connect: { id: dto.gameFormatId } },
+    },
+  });
+}
 
-  // Find all phases
+
   findAll() {
     return this.prisma.phase.findMany({
       include: { gameFormat: true },
     });
   }
 
-  // Find one phase by ID
   findOne(id: string) {
     return this.prisma.phase.findUnique({
       where: { id },
@@ -37,7 +36,6 @@ export class PhaseService {
     });
   }
 
-  // Update phase
   async update(id: string, dto: UpdatePhaseDto) {
     const exists = await this.prisma.phase.findUnique({ where: { id } });
     if (!exists) throw new NotFoundException('Phase not found');
@@ -49,6 +47,8 @@ export class PhaseService {
         description: dto.description,
         order: dto.order,
         scoringType: dto.scoringType,
+        stages: dto.stages,
+        timeDuration: dto.timeDuration,
         ...(dto.gameFormatId
           ? { gameFormat: { connect: { id: dto.gameFormatId } } }
           : {}),
@@ -56,7 +56,6 @@ export class PhaseService {
     });
   }
 
-  // Delete phase
   async remove(id: string) {
     const exists = await this.prisma.phase.findUnique({ where: { id } });
     if (!exists) throw new NotFoundException('Phase not found');
@@ -64,12 +63,9 @@ export class PhaseService {
     return this.prisma.phase.delete({ where: { id } });
   }
 
-// src/admin/phase/phase.service.ts
-async removeByFormat(gameFormatId: number) {
-  return this.prisma.phase.deleteMany({
-    where: { gameFormatId },
-  });
-}
-
-
+  async removeByFormat(gameFormatId: number) {
+    return this.prisma.phase.deleteMany({
+      where: { gameFormatId },
+    });
+  }
 }

@@ -12,28 +12,82 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async register(dto: RegisterDto) {
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const user = await this.prisma.user.create({
-      data: {
-        name: dto.name,
-        email: dto.email,
-        password: hashedPassword,
-      },
-    });
-    return user;
-  }
+  // Register new user
+// register new user
+// register new user
+async register(dto: RegisterDto) {
+  const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-  async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
-    
-    const isMatch = await bcrypt.compare(dto.password, user.password);
-    if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+  // Create user
+  const user = await this.prisma.user.create({
+    data: {
+      name: dto.name,
+      email: dto.email,
+      password: hashedPassword,
+      language: dto.language,
+      phone: dto.phone,
+      roleId: dto.roleId,
+    },
+  });
 
-    const token = this.jwtService.sign({ id: user.id, email: user.email });
-    return { token };
-  }
+  // Fetch role based on user's roleId
+  const role = await this.prisma.role.findFirst({
+    where: { id: user.roleId },
+  });
+
+  // JWT token payload: only user id and role title
+  const token = this.jwtService.sign({
+    id: user.id,
+    role: role?.title || 'User',
+  });
+
+  return {
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      language: user.language,
+      phone: user.phone,
+      role: role?.title || 'User',
+    },
+  };
+}
+
+// login user
+async login(dto: LoginDto) {
+  const user = await this.prisma.user.findUnique({
+    where: { email: dto.email },
+  });
+
+  if (!user) throw new UnauthorizedException('Invalid credentials');
+
+  const isMatch = await bcrypt.compare(dto.password, user.password);
+  if (!isMatch) throw new UnauthorizedException('Invalid credentials');
+
+  // Fetch role based on user's roleId
+  const role = await this.prisma.role.findFirst({
+    where: { id: user.roleId },
+  });
+
+  // JWT token payload: only user id and role title
+  const token = this.jwtService.sign({
+    id: user.id,
+    role: role?.title || 'User',
+  });
+
+  return {
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      language: user.language,
+      phone: user.phone,
+      role: role?.title || 'User',
+    },
+  };
+}
+
+
 }

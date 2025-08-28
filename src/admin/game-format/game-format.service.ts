@@ -7,12 +7,17 @@ import { UpdateGameFormatDto } from './dto/update-game-format.dto';
 export class GameFormatService {
   constructor(private prisma: PrismaService) {}
 
- async create(dto: CreateGameFormatDto) {
+  async create(dto: CreateGameFormatDto) {
     return this.prisma.gameFormat.create({
       data: {
         name: dto.name,
         description: dto.description,
-        createdById: dto.createdById, // comes from request body
+        mode: dto.mode,
+        totalPhases: dto.totalPhases,
+        timeDuration: dto.timeDuration,
+        isPublished: dto.isPublished ?? false,
+        isActive: dto.isActive ?? true,
+        createdById: dto.createdById,
       },
     });
   }
@@ -36,12 +41,19 @@ export class GameFormatService {
   async update(id: number, dto: UpdateGameFormatDto) {
     return this.prisma.gameFormat.update({
       where: { id },
-      data: dto,
+      data: {
+        name: dto.name,
+        description: dto.description,
+        mode: dto.mode,
+        totalPhases: dto.totalPhases,
+        timeDuration: dto.timeDuration,
+        isPublished: dto.isPublished,
+        isActive: dto.isActive,
+      },
     });
   }
 
   async remove(id: number) {
-    // soft delete
     return this.prisma.gameFormat.update({
       where: { id },
       data: { isActive: false },

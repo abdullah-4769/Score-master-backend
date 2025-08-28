@@ -7,33 +7,33 @@ import { UpdateGameFormatDto } from './dto/update-game-format.dto';
 export class GameFormatController {
   constructor(private readonly gameFormatService: GameFormatService) {}
 
- @Post()
+  @Post()
   async create(@Body() dto: CreateGameFormatDto) {
-    return this.gameFormatService.create(dto);
+    return await this.gameFormatService.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.gameFormatService.findAll();
+  async findAll() {
+    return await this.gameFormatService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.gameFormatService.findOne(+id);
+  async findOne(@Param('id') id: string) {
+    return await this.gameFormatService.findOne(Number(id));
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateGameFormatDto) {
-    return this.gameFormatService.update(+id, dto);
+  async update(@Param('id') id: string, @Body() dto: UpdateGameFormatDto) {
+    return await this.gameFormatService.update(Number(id), dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.gameFormatService.remove(+id);
+  async remove(@Param('id') id: string) {
+    return await this.gameFormatService.remove(Number(id));
   }
 
   @Patch(':id/publish')
-  publish(@Param('id') id: string) {
-    return this.gameFormatService.publish(+id);
+  async publish(@Param('id') id: string) {
+    return await this.gameFormatService.publish(Number(id));
   }
 }
