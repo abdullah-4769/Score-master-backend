@@ -8,35 +8,44 @@ export class GameFormatService {
   constructor(private prisma: PrismaService) {}
 
   async create(dto: CreateGameFormatDto) {
-    return this.prisma.gameFormat.create({
-      data: {
-        name: dto.name,
-        description: dto.description,
-        mode: dto.mode,
-        totalPhases: dto.totalPhases,
-        timeDuration: dto.timeDuration,
-        isPublished: dto.isPublished ?? false,
-        isActive: dto.isActive ?? true,
-        createdById: dto.createdById,
-      },
-    });
-  }
+  return this.prisma.gameFormat.create({
+    data: {
+      name: dto.name,
+      description: dto.description,
+      mode: dto.mode,
+      totalPhases: dto.totalPhases,
+      timeDuration: dto.timeDuration,
+      isPublished: dto.isPublished ?? false,
+      isActive: dto.isActive ?? true,
+      createdById: dto.createdById,
+      facilitators: dto.facilitatorIds
+        ? {
+            connect: dto.facilitatorIds.map((id) => ({ id })),
+          }
+        : undefined,
+    },
+  });
+}
+
 
   async findAll() {
     return this.prisma.gameFormat.findMany({
       where: { isActive: true },
-      include: { createdBy: true },
+      include: { createdBy: true , facilitators: true}, // include facilitators relation
     });
   }
 
-  async findOne(id: number) {
-    const format = await this.prisma.gameFormat.findUnique({
-      where: { id },
-      include: { createdBy: true },
-    });
-    if (!format) throw new NotFoundException('Game format not found');
-    return format;
-  }
+ async findOne(id: number) {
+  const format = await this.prisma.gameFormat.findUnique({
+    where: { id },
+    include: { 
+      createdBy: true,
+      facilitators: true, // include facilitators relation
+    },
+  });
+  if (!format) throw new NotFoundException('Game format not found');
+  return format;
+}
 
   async update(id: number, dto: UpdateGameFormatDto) {
     return this.prisma.gameFormat.update({
@@ -66,4 +75,23 @@ export class GameFormatService {
       data: { isPublished: true },
     });
   }
+
+  async findByFacilitatorId(facilitatorId: number) {
+    return this.prisma.gameFormat.findMany({
+      where: {
+        facilitators: {
+          some: {
+            id: facilitatorId
+          }
+        }
+      },
+      include: {
+        createdBy: true,
+        facilitators: true
+      }
+    });
+  }
+
+
+
 }

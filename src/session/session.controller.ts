@@ -54,4 +54,33 @@ async join(@Body() dto: JoinSessionDto) {
     return { sessionId, players };
   }
 
+
+
+   @Get(':id/phases')
+  async getSessionPhases(@Param('id') id: string) {
+    return this.sessionService.getSessionWithPhasesAndQuestions(Number(id));
+  }
+
+
+  @Post(':sessionId/add-player')
+  async addPlayer(
+    @Param('sessionId') sessionId: string,
+    @Body('userId') userId: number
+  ) {
+    return this.sessionService.addPlayerToSession(userId, +sessionId);
+  }
+ @Get(':id/progress')
+  progress(@Param('id') id: string) {
+    return this.sessionService.getSessionProgress(+id)
+  }
+
+  @Post(':id/auto-join')
+async autoJoin(
+  @Param('id', ParseIntPipe) sessionId: number,
+  @Body('playerId') playerId: number
+) {
+  return this.sessionService.autoJoinSession(playerId, sessionId);
+}
+
+
 }

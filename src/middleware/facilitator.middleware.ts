@@ -17,14 +17,13 @@ export class FacilitatorMiddleware implements NestMiddleware {
       if (!authHeader) throw new UnauthorizedException('No token provided');
 
       const token = authHeader.split(' ')[1];
-      // Tell TypeScript the payload will have id and role
+
       const payload = this.jwtService.verify(token) as TokenPayload;
 
       if (payload.role !== 'Facilitator') {
         throw new UnauthorizedException('Access denied: Facilitators only');
       }
 
-      // Attach user info to request for later use
       req['user'] = payload;
       next();
     } catch (error) {

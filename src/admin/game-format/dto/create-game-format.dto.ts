@@ -1,5 +1,5 @@
 // src/admin/game-format/dto/create-game-format.dto.ts
-import { IsBoolean, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString ,IsArray,ArrayNotEmpty,ArrayUnique} from 'class-validator';
 
 export class CreateGameFormatDto {
   @IsString()
@@ -15,8 +15,11 @@ export class CreateGameFormatDto {
   @IsInt()
   totalPhases: number;
 
-  @IsInt()
-  timeDuration: number;
+
+@IsInt()
+timeDuration: number; // required, no '?'
+
+
 
   @IsOptional()
   @IsBoolean()
@@ -28,4 +31,12 @@ export class CreateGameFormatDto {
 
   @IsInt()
   createdById: number;
+
+ @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()       // optional but if provided, should not be empty
+  @ArrayUnique()         // no duplicate IDs
+  @IsInt({ each: true }) // ensures every item is an integer
+  facilitatorIds?: number[];
+
 }

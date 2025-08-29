@@ -8,18 +8,24 @@ import { QuestionModule } from './admin/question/question.module';
 import { PhaseModule } from './admin/phase/phase.module';
 import { PlayerCapabilityModule } from './admin/player-capability/player-capability.module'
 import { SessionModule } from './session/session.module';
-
+import { GameFormatFetchDataModule } from './gameformatfetchdata/gameformatfetchdata.module'
+import { PhaseSessionModule } from './phase-session/phase-session.module';
+import { WebsocketsModule } from './websockets/websockets.module';
 
 
 @Module({
-  imports: [AuthModule,
-     RoleModule,
-     GameFormatModule,
-     PhaseModule,
-     QuestionModule,
+  imports: [
+    AuthModule,
+    RoleModule,
+    GameFormatModule,
+    PhaseModule,
+    QuestionModule,
     PlayerCapabilityModule,
-    SessionModule
-    ],
+    SessionModule,
+    GameFormatFetchDataModule,
+    PhaseSessionModule,
+    WebsocketsModule
+  ],
   providers: [PrismaService, JwtService],
 })
-export class AppModule {}
+export class AppModule { }

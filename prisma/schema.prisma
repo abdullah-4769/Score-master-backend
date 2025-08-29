@@ -21,6 +21,7 @@ model User {
   roleId     Int       // must be Int for numeric IDs
   sessions  Session[]
   joinedSessions PlayerSession[]
+   createdGameFormats GameFormat[] @relation("GameFormatFacilitators")
 }
 
 
@@ -50,6 +51,7 @@ model GameFormat {
 
   createdById  Int
   createdBy    User      @relation(fields: [createdById], references: [id])
+  facilitators User[] @relation("GameFormatFacilitators")
 
   phases       Phase[]
   sessions  Session[]
@@ -71,7 +73,7 @@ model Phase {
 
   gameFormat    GameFormat  @relation(fields: [gameFormatId], references: [id])
   questions     Question[]  // back-relation to Question
-
+  phaseSessions PhaseSession[] 
   @@unique([gameFormatId, order]) // Order must be unique inside a format
   @@index([gameFormatId])
 }
@@ -154,6 +156,7 @@ model Session {
   pausedAt     DateTime?
   endedAt      DateTime?
   players     PlayerSession[]
+  phaseSessions PhaseSession[] 
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
 }
@@ -177,3 +180,28 @@ model PlayerSession {
 }
 
 
+model PhaseSession {
+  id          Int          @id @default(autoincrement())
+  sessionId   Int
+  session     Session      @relation(fields: [sessionId], references: [id])
+  phaseId     String       // match Phase.id type
+  phase       Phase        @relation(fields: [phaseId], references: [id])
+
+  status      PhaseStatus  @default(PENDING)
+  timeDuration Int
+  elapsedTime  Int          @default(0)
+
+  startedAt   DateTime?
+  pausedAt    DateTime?
+  endedAt     DateTime?
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum PhaseStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  COMPLETED
+}

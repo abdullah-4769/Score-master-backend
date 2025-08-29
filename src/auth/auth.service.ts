@@ -12,9 +12,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  // Register new user
-// register new user
-// register new user
+
 async register(dto: RegisterDto) {
   const hashedPassword = await bcrypt.hash(dto.password, 10);
 
@@ -54,7 +52,7 @@ async register(dto: RegisterDto) {
   };
 }
 
-// login user
+
 async login(dto: LoginDto) {
   const user = await this.prisma.user.findUnique({
     where: { email: dto.email },
@@ -65,12 +63,12 @@ async login(dto: LoginDto) {
   const isMatch = await bcrypt.compare(dto.password, user.password);
   if (!isMatch) throw new UnauthorizedException('Invalid credentials');
 
-  // Fetch role based on user's roleId
+
   const role = await this.prisma.role.findFirst({
     where: { id: user.roleId },
   });
 
-  // JWT token payload: only user id and role title
+
   const token = this.jwtService.sign({
     id: user.id,
     role: role?.title || 'User',

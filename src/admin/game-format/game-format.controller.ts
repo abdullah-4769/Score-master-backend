@@ -36,4 +36,11 @@ export class GameFormatController {
   async publish(@Param('id') id: string) {
     return await this.gameFormatService.publish(Number(id));
   }
+
+ @Get('facilitator/:id')
+  async getByFacilitator(@Param('id') facilitatorId: string) {
+    const formats = await this.gameFormatService.findByFacilitatorId(+facilitatorId);
+    return formats;
+  }
+
 }
