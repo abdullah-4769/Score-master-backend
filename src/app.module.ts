@@ -10,7 +10,7 @@ import { PlayerCapabilityModule } from './admin/player-capability/player-capabil
 import { SessionModule } from './session/session.module';
 import { GameFormatFetchDataModule } from './gameformatfetchdata/gameformatfetchdata.module'
 import { PhaseSessionModule } from './phase-session/phase-session.module';
-import { WebsocketsModule } from './websockets/websockets.module';
+import { WebsocketModule } from './websocket/websocket.module';
 
 
 @Module({
@@ -24,7 +24,8 @@ import { WebsocketsModule } from './websockets/websockets.module';
     SessionModule,
     GameFormatFetchDataModule,
     PhaseSessionModule,
-    WebsocketsModule
+    WebsocketModule,
+
   ],
   providers: [PrismaService, JwtService],
 })
