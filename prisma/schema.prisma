@@ -16,9 +16,10 @@ model User {
   password   String
   language   String?
   phone      String?
+  role       String?
   createdAt  DateTime  @default(now())
   gameFormats GameFormat[]
-  roleId     Int       // must be Int for numeric IDs
+  roleId     Int?  
   sessions  Session[]
   joinedSessions PlayerSession[]
    createdGameFormats GameFormat[] @relation("GameFormatFacilitators")

@@ -14,7 +14,16 @@ export class AuthService {
 
 
 async register(dto: RegisterDto) {
-  const hashedPassword = await bcrypt.hash(dto.password, 10);
+  const hashedPassword = await bcrypt.hash(dto.password, 10)
+
+  // Determine role
+  let roleTitle = dto.role || 'User'
+  if (dto.roleId) {
+    const role = await this.prisma.role.findFirst({
+      where: { id: dto.roleId },
+    })
+    if (role) roleTitle = role.title
+  }
 
   // Create user
   const user = await this.prisma.user.create({
@@ -24,20 +33,16 @@ async register(dto: RegisterDto) {
       password: hashedPassword,
       language: dto.language,
       phone: dto.phone,
-      roleId: dto.roleId,
+      roleId: dto.roleId || null,
+      role: roleTitle,   // save role directly
     },
-  });
+  })
 
-  // Fetch role based on user's roleId
-  const role = await this.prisma.role.findFirst({
-    where: { id: user.roleId },
-  });
-
-  // JWT token payload: only user id and role title
+  // JWT token
   const token = this.jwtService.sign({
     id: user.id,
-    role: role?.title || 'User',
-  });
+    role: roleTitle,
+  })
 
   return {
     token,
@@ -47,10 +52,11 @@ async register(dto: RegisterDto) {
       email: user.email,
       language: user.language,
       phone: user.phone,
-      role: role?.title || 'User',
+      role: roleTitle,
     },
-  };
+  }
 }
+
 
 
 async login(dto: LoginDto) {
