@@ -73,4 +73,24 @@ export class AuthService {
       role,
     }
   }
+
+
+
+async getAllFacilitators() {
+  const facilitators = await this.prisma.user.findMany({
+    where: { role: 'facilitator' },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      language: true,
+      phone: true
+    }
+  });
+
+  return facilitators;
+}
+
+
+
 }
