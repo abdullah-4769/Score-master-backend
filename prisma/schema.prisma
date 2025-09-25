@@ -84,7 +84,7 @@ model Phase {
 }
 
 enum ScoringType {
-  AUTOMATIC
+  AI
   MANUAL
   HYBRID
 }

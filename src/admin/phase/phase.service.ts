@@ -31,7 +31,7 @@ export class PhaseService {
           name: dto.name,
           description: dto.description,
           order: dto.order,
-          scoringType: dto.scoringType || ScoringType.AUTOMATIC,
+          scoringType: dto.scoringType || ScoringType.AI,
           timeDuration: dto.timeDuration,
           challengeTypes: dto.challengeTypes || [],
           difficulty: dto.difficulty?.toUpperCase() as 'EASY' | 'MEDIUM' | 'HARD' || 'EASY',
