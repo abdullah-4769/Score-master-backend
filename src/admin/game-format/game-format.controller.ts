@@ -11,6 +11,10 @@ export class GameFormatController {
   async create(@Body() dto: CreateGameFormatDto) {
     return await this.gameFormatService.create(dto);
   }
+  @Get('all-games')
+  getAllGamesPhases() {
+    return this.gameFormatService.getGamesSummary();
+  }
 
   @Get()
   async findAll() {
@@ -37,11 +41,11 @@ export class GameFormatController {
     return await this.gameFormatService.publish(Number(id));
   }
 
- @Get('facilitator/:id')
-  async getByFacilitator(@Param('id') facilitatorId: string) {
-    const formats = await this.gameFormatService.findByFacilitatorId(+facilitatorId);
-    return formats;
-  }
+@Get('facilitator/:id')
+async getByFacilitator(@Param('id') facilitatorId: string) {
+  const formats = await this.gameFormatService.findByFacilitatorId(+facilitatorId)
+  return formats
+}
 
 
 

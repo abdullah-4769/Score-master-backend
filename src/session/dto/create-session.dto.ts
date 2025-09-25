@@ -8,5 +8,5 @@ export class CreateSessionDto {
   duration: number;
 
   @IsInt()
-  userId: number; // temporary, remove later when using JWT
+  userId: number; 
 }

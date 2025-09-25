@@ -27,7 +27,7 @@ export class GameFormatFetchDataService {
   }
 
 
-async getQuestionsByPhaseId(phaseId: string) {
+async getQuestionsByPhaseId(phaseId: number) {
   const phase = await this.prisma.phase.findUnique({
     where: { id: phaseId },
     include: {

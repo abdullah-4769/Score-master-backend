@@ -76,26 +76,51 @@ export class GameFormatService {
     });
   }
 
-  async findByFacilitatorId(facilitatorId: number) {
-    return this.prisma.gameFormat.findMany({
-      where: {
-        facilitators: {
-          some: {
-            id: facilitatorId
-          }
+async findByFacilitatorId(facilitatorId: number) {
+  return this.prisma.gameFormat.findMany({
+    where: {
+      facilitators: {
+        some: {
+          id: facilitatorId
         }
-      },
-      include: {
-        createdBy: true,
-        facilitators: true
       }
+    },
+    include: {
+      createdBy: true,
+      facilitators: { 
+        where: { id: facilitatorId } 
+      }
+    }
+  })
+}
+
+
+  async getGamesSummary() {
+    const games = await this.prisma.gameFormat.findMany({
+      include: { phases: true },
+    });
+
+    return games.map(game => {
+      const phases = game.phases;
+      let finalScoringType: string;
+
+      if (phases.length === 0) {
+        finalScoringType = 'AUTOMATIC';
+      } else {
+        const firstType = phases[0].scoringType;
+        const allSame = phases.every(p => p.scoringType === firstType);
+        finalScoringType = allSame ? firstType : 'MANUAL';
+      }
+
+      return {
+        name: game.name,
+        description: game.description,
+        mode: game.mode,
+        totalPhases: game.totalPhases,
+        isActive: game.isActive,
+        scoringType: finalScoringType,
+      };
     });
   }
-
-
-
-
-
-
 
 }

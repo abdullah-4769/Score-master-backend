@@ -309,26 +309,27 @@ export class SessionService {
 
     // Track current phase
     let phaseStart = 0
-    let currentPhase: {
-      id: string
-      name: string
-      order: number
-      duration: number
-      elapsed: number
-      remaining: number
-    } | null = null
+ let currentPhase: {
+  id: string
+  name: string
+  order: number
+  duration: number
+  elapsed: number
+  remaining: number
+} | null = null
 
     for (const phase of session.gameFormat.phases) {
       const phaseEnd = phaseStart + phase.timeDuration
       if (totalElapsed < phaseEnd) {
-        currentPhase = {
-          id: phase.id,
-          name: phase.name,
-          order: phase.order,
-          duration: phase.timeDuration,
-          elapsed: totalElapsed - phaseStart,
-          remaining: phaseEnd - totalElapsed,
-        }
+       currentPhase = {
+  id: phase.id.toString(),
+  name: phase.name,
+  order: phase.order ?? 0,
+  duration: phase.timeDuration,
+  elapsed: totalElapsed - phaseStart,
+  remaining: phaseEnd - totalElapsed,
+}
+
         break
       }
       phaseStart = phaseEnd

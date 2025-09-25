@@ -1,5 +1,4 @@
-// phase.controller.ts
-import { Body, Controller, Delete, Get, ParseIntPipe, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, ParseIntPipe } from '@nestjs/common';
 import { PhaseService } from './phase.service';
 import { CreatePhaseDto } from './dto/create-phase.dto';
 import { UpdatePhaseDto } from './dto/update-phase.dto';
@@ -18,18 +17,9 @@ export class PhaseController {
     return this.phaseService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.phaseService.findOne(id);
-  }
-
-  @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdatePhaseDto) {
-    return this.phaseService.update(id, dto);
-  }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.phaseService.remove(id);
   }
 
@@ -37,4 +27,22 @@ export class PhaseController {
   removeByFormat(@Param('formatId', ParseIntPipe) formatId: number) {
     return this.phaseService.removeByFormat(formatId);
   }
+
+  @Get('game/:gameFormatId')
+  async getByGameFormat(@Param('gameFormatId', ParseIntPipe) gameFormatId: number) {
+    return this.phaseService.findByGameFormat(gameFormatId);
+  }
+
+
+    @Get(':id')
+  getPhaseById(@Param('id', ParseIntPipe) id: number) {
+    return this.phaseService.findOne(id)
+  }
+
+
+   @Put(':id')
+  updatePhase(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdatePhaseDto) {
+    return this.phaseService.update(id, dto)
+  }
+
 }

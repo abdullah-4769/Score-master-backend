@@ -11,7 +11,7 @@ export class PhaseSessionService {
   return this.prisma.phaseSession.create({
     data: {
       sessionId: dto.sessionId,             // number is fine
-      phaseId: dto.phaseId.toString(),      // convert to string
+      phaseId: dto.phaseId,      // convert to string
       timeDuration: dto.timeDuration,
     },
   });

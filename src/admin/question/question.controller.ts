@@ -15,7 +15,7 @@ export class QuestionController {
 
   // Get all questions for a specific phase
   @Get('phase/:phaseId')
-  async findAll(@Param('phaseId') phaseId: string) {
+  async findAll(@Param('phaseId') phaseId: number) {
     return await this.service.findAll(phaseId)
   }
 

@@ -12,7 +12,7 @@ export class GameFormatFetchDataController {
   }
 
   @Get('phase/:phaseId/questions')
-  async getQuestionsByPhaseId(@Param('phaseId') phaseId: string) {
+  async getQuestionsByPhaseId(@Param('phaseId') phaseId: number) {
     return this.gameFormatService.getQuestionsByPhaseId(phaseId)
   }
 

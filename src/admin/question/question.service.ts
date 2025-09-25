@@ -22,7 +22,7 @@ async create(dto: CreateQuestionDto) {
   return this.prisma.question.create({ data })
 }
 
-  async findAll(phaseId: string) {
+  async findAll(phaseId: number) {
     return this.prisma.question.findMany({
       where: { phaseId },
       orderBy: { order: 'asc' }

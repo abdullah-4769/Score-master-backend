@@ -61,21 +61,25 @@ model GameFormat {
 
 
 model Phase {
-  id            String      @id @default(uuid())
-  gameFormatId  Int         // must match GameFormat.id type
-  name          String
-  description   String?
-  order         Int
-  scoringType   ScoringType
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  stages        Int         // number of stages in the phase
-  timeDuration  Int         // duration in minutes, you can adjust type if needed
+  id             Int       @id @default(autoincrement())
+  gameFormatId   Int
+  name           String
+  description    String?
+  order          Int?
+  scoringType    ScoringType
+  timeDuration   Int
+  challengeTypes String[]     
+  difficulty     DifficultyLevel
+  badge          String?
+  requiredScore  Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
-  gameFormat    GameFormat  @relation(fields: [gameFormatId], references: [id])
-  questions     Question[]  // back-relation to Question
-  phaseSessions PhaseSession[] 
-  @@unique([gameFormatId, order]) // Order must be unique inside a format
+  gameFormat     GameFormat   @relation(fields: [gameFormatId], references: [id])
+  questions      Question[]
+  phaseSessions  PhaseSession[]
+
+  @@unique([gameFormatId, order])
   @@index([gameFormatId])
 }
 
@@ -85,10 +89,17 @@ enum ScoringType {
   HYBRID
 }
 
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+}
+
+
 
 model Question {
   id            String        @id @default(uuid())
-  phaseId       String
+  phaseId       Int
   type          QuestionType
   questionText  String?       // optional so type can be added first
   scoringRubric Json?         // optional at first
@@ -98,7 +109,7 @@ model Question {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  phase         Phase   @relation(fields: [phaseId], references: [id])
+  phase    Phase    @relation(fields: [phaseId], references: [id])
 
   @@unique([phaseId, order])
   @@index([phaseId])
@@ -122,7 +133,7 @@ model PlayerCapability {
 
   minPlayers      Int
   maxPlayers      Int
-  badgeNames      Json?     // array of badge names, e.g. ["Gold", "Silver"]
+  badgeNames      Json?     
 
   requireAllTrue  Boolean   @default(false)
   aiScoring       Boolean   @default(false)
@@ -185,7 +196,7 @@ model PhaseSession {
   id          Int          @id @default(autoincrement())
   sessionId   Int
   session     Session      @relation(fields: [sessionId], references: [id])
-  phaseId     String       // match Phase.id type
+  phaseId     Int       // match Phase.id type
   phase       Phase        @relation(fields: [phaseId], references: [id])
 
   status      PhaseStatus  @default(PENDING)
