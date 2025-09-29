@@ -11,7 +11,7 @@ export class PlayerCapabilityService {
   async create(dto: CreatePlayerCapabilityDto) {
     return this.prisma.playerCapability.create({
       data: {
-        sessionId: dto.sessionId,
+        gameFormatId: dto.gameFormatId,
         minPlayers: dto.minPlayers,
         maxPlayers: dto.maxPlayers,
         badgeNames: dto.badgeNames as Prisma.JsonArray,
@@ -40,7 +40,7 @@ export class PlayerCapabilityService {
     return this.prisma.playerCapability.delete({ where: { id } })
   }
 
-  async findBySessionId(sessionId: number) {
-    return this.prisma.playerCapability.findMany({ where: { sessionId } })
+  async findByGameFormatId(gameFormatId: number) {
+    return this.prisma.playerCapability.findMany({ where: { gameFormatId } })
   }
 }

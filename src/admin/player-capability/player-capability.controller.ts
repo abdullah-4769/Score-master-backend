@@ -32,8 +32,8 @@ export class PlayerCapabilityController {
     return this.service.remove(+id)
   }
 
-  @Get('by-session/:sessionId')
-  findBySession(@Param('sessionId') sessionId: string) {
-    return this.service.findBySessionId(+sessionId)
+  @Get('by-format/:gameFormatId')
+  findByGameFormat(@Param('gameFormatId') gameFormatId: string) {
+    return this.service.findByGameFormatId(+gameFormatId)
   }
 }
