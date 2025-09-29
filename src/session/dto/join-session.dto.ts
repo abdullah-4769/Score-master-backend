@@ -5,5 +5,5 @@ export class JoinSessionDto {
   joinCode: string;
 
   @IsInt()
-  playerId: number; // temporary, until you use JWT auth
+  playerId: number;
 }

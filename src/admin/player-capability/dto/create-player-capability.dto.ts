@@ -2,7 +2,7 @@ import { IsInt, IsOptional, IsBoolean, IsArray } from 'class-validator'
 
 export class CreatePlayerCapabilityDto {
   @IsInt()
-  FormatId: number
+  sessionId: number
 
   @IsInt()
   minPlayers: number

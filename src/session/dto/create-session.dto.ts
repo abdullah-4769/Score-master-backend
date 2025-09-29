@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsDateString } from 'class-validator';
 
 export class CreateSessionDto {
   @IsInt()
@@ -8,5 +8,12 @@ export class CreateSessionDto {
   duration: number;
 
   @IsInt()
-  userId: number; 
+  userId: number;
+
+  @IsNotEmpty()
+  description: string;
+
+  @IsOptional()
+  @IsDateString()
+  startedAt?: string; // optional start time in ISO format
 }

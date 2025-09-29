@@ -1,9 +1,12 @@
 export class CreateQuestionDto {
   phaseId: number
   type: 'MCQ' | 'OPEN_ENDED' | 'PUZZLE' | 'SIMULATION'
+  scenario?: string
   questionText?: string
   scoringRubric?: object
   order?: number
   point?: number
-    mcqOptions?: string[]
+  mcqOptions?: string[]
+  sequenceOptions?: string[]
+  correctSequence?: number[]
 }

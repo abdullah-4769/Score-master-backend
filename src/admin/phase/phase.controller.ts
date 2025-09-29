@@ -45,4 +45,10 @@ export class PhaseController {
     return this.phaseService.update(id, dto)
   }
 
+
+  @Get('game/all/:gameId')
+  getAllPhasesOfGame(@Param('gameId', ParseIntPipe) gameId: number) {
+    return this.phaseService.findAllByGame(gameId)
+  }
+
 }

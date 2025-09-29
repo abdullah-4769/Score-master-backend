@@ -32,11 +32,8 @@ export class PlayerCapabilityController {
     return this.service.remove(+id)
   }
 
-@Get('by-format/:FormatId')
-findByFormat(@Param('FormatId') FormatId: string) {
-  return this.service.findByFormatId(+FormatId)
-}
-
-
-
+  @Get('by-session/:sessionId')
+  findBySession(@Param('sessionId') sessionId: string) {
+    return this.service.findBySessionId(+sessionId)
+  }
 }

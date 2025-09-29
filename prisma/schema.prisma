@@ -98,14 +98,17 @@ enum DifficultyLevel {
 
 
 model Question {
-  id            String        @id @default(uuid())
+  id            Int        @id @default(autoincrement())
   phaseId       Int
   type          QuestionType
+  scenario      String?       // new field: scenario or summary before the question
   questionText  String?       // optional so type can be added first
   scoringRubric Json?         // optional at first
   order         Int?          // optional at first
   point         Int?          // new field, optional at first
   mcqOptions    Json?         // new optional field for MCQ options
+  sequenceOptions Json?       // new optional field for sequence/ordered puzzles
+  correctSequence Json?       // correct order for sequence puzzles
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -114,6 +117,7 @@ model Question {
   @@unique([phaseId, order])
   @@index([phaseId])
 }
+
 
 enum QuestionType {
   MCQ
@@ -125,52 +129,31 @@ enum QuestionType {
 
 
 
-
-
-model PlayerCapability {
-  id              Int      @id @default(autoincrement())
-  FormatId    Int
-
-  minPlayers      Int
-  maxPlayers      Int
-  badgeNames      Json?     
-
-  requireAllTrue  Boolean   @default(false)
-  aiScoring       Boolean   @default(false)
-  allowLaterJoin  Boolean   @default(true)
-  sendInvitation  Boolean   @default(false)
-  recordSession   Boolean   @default(false)
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-
-}
-
-
-
-
 model Session {
-  id           Int          @id @default(autoincrement())
-  gameFormatId Int
-  gameFormat   GameFormat   @relation(fields: [gameFormatId], references: [id])
+  id             Int               @id @default(autoincrement())
+  gameFormatId   Int
+  gameFormat     GameFormat        @relation(fields: [gameFormatId], references: [id])
+  description    String
+  createdById    Int
+  createdBy      User              @relation(fields: [createdById], references: [id])
 
-  createdById  Int
-  createdBy    User         @relation(fields: [createdById], references: [id])
+  joinCode       String            @unique
+  joiningLink    String?           // optional link for joining the session
+  status         SessionStatus     @default(PENDING)
 
-  joinCode     String       @unique
-  status       SessionStatus @default(PENDING)
+  duration       Int
+  elapsedTime    Int               @default(0)
 
-  duration     Int
-  elapsedTime  Int          @default(0)
+  startedAt      DateTime?
+  pausedAt       DateTime?
+  endedAt        DateTime?
 
-  startedAt    DateTime?
-  pausedAt     DateTime?
-  endedAt      DateTime?
-  players     PlayerSession[]
-  phaseSessions PhaseSession[] 
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  players        PlayerSession[]
+  phaseSessions  PhaseSession[] 
+  capabilities   PlayerCapability[]
+
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 }
 
 enum SessionStatus {
@@ -179,6 +162,29 @@ enum SessionStatus {
   PAUSED
   COMPLETED
 }
+
+
+model PlayerCapability {
+  id          Int      @id @default(autoincrement())
+  sessionId   Int
+  session     Session  @relation(fields: [sessionId], references: [id])
+
+  minPlayers  Int
+  maxPlayers  Int
+  badgeNames  Json?
+
+  requireAllTrue  Boolean   @default(false)
+  aiScoring       Boolean   @default(false)
+  allowLaterJoin  Boolean   @default(true)
+  sendInvitation  Boolean   @default(false)
+  recordSession   Boolean   @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+
 
 
 

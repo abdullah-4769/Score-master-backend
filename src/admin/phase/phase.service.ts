@@ -124,5 +124,44 @@ async findByGameFormat(gameFormatId: number) {
 
 
 
+async findAllByGame(gameId: number) {
+  const gameFormat = await this.prisma.gameFormat.findUnique({
+    where: { id: gameId },
+    include: {
+      phases: { orderBy: { order: 'asc' } },
+      facilitators: true,
+    },
+  })
+  if (!gameFormat) throw new NotFoundException('Game not found')
+
+  return {
+    id: gameFormat.id,
+    name: gameFormat.name,
+    description: gameFormat.description,
+    mode: gameFormat.mode,
+    totalPhases: gameFormat.totalPhases,
+    timeDuration: gameFormat.timeDuration,
+    isPublished: gameFormat.isPublished,
+    isActive: gameFormat.isActive,
+    facilitators: gameFormat.facilitators.map(f => ({
+      id: f.id,
+      name: f.name,
+      email: f.email,
+    })),
+    phases: gameFormat.phases.map(p => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      order: p.order,
+      scoringType: p.scoringType,
+      timeDuration: p.timeDuration,
+      challengeTypes: p.challengeTypes,
+      difficulty: p.difficulty,
+      badge: p.badge,
+      requiredScore: p.requiredScore,
+    })),
+  }
+}
+
 
 }
