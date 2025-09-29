@@ -32,6 +32,8 @@ export class QuestionController {
     return this.service.remove(id)
   }
 
+  
+
   @Post("/generate")
   async generate(@Body() dto: GenerateQuestionDto) {
     return this.service.generate(dto)
