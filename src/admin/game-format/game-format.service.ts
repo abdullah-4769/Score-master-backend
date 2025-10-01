@@ -123,4 +123,23 @@ async findByFacilitatorId(facilitatorId: number) {
     });
   }
 
+async findFacilitatorsByGameId(gameId: number) {
+  const gameWithFacilitators = await this.prisma.gameFormat.findMany({
+    where: { id: gameId },
+    include: {
+      facilitators: true,
+    },
+  });
+
+  if (!gameWithFacilitators || gameWithFacilitators.length === 0) {
+    throw new NotFoundException('Game format not found');
+  }
+
+  return gameWithFacilitators[0].facilitators;
+}
+
+
+
+
+
 }

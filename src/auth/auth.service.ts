@@ -91,6 +91,18 @@ async getAllFacilitators() {
   return facilitators;
 }
 
+async getAllUsers() {
+  return this.prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      language: true,
+      phone: true,
+      role: true
+    }
+  })
+}
 
 
 }

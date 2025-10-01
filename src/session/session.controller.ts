@@ -69,4 +69,10 @@ async create(@Body() dto: CreateSessionDto) {
   async autoJoin(@Param('id', ParseIntPipe) sessionId: number, @Body('playerId') playerId: number) {
     return this.sessionService.autoJoinSession(playerId, sessionId);
   }
+
+  @Get(':id/detail')
+  async getSessionDetail(@Param('id', ParseIntPipe) sessionId: number) {
+    return this.sessionService.getSessionDetail(sessionId)
+  }
+
 }

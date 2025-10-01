@@ -21,6 +21,10 @@ export class AuthController {
     return this.authService.getAllFacilitators();
   }
 
+@Get('users')
+getAllUsers() {
+  return this.authService.getAllUsers()
+}
 
   
 }

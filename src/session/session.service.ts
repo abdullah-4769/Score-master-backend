@@ -3,6 +3,8 @@ import { PrismaService } from '../lib/prisma/prisma.service';
 import { JwtService } from '../lib/jwt/jwt.service';
 import { WebsocketService } from '../websocket/websocket.service';
 import { CreateSessionDto } from './dto/create-session.dto';
+import * as crypto from 'crypto'
+import { PhaseStatus } from '@prisma/client'
 
 @Injectable()
 export class SessionService {
@@ -12,9 +14,11 @@ export class SessionService {
     private websocket: WebsocketService
   ) {}
 
+
+
 async createSession(dto: CreateSessionDto) {
-  const joinCode = this.jwt.sign({ gameFormatId: dto.gameFormatId, createdById: dto.userId });
-  const joiningLink = `https://your-app.com/join/${joinCode}`;
+  const joinCode = crypto.randomBytes(3).toString('hex')
+  const joiningLink = `https://your-app.com/join/${joinCode}`
 
   return this.prisma.session.create({
     data: {
@@ -24,12 +28,13 @@ async createSession(dto: CreateSessionDto) {
       joiningLink,
       description: dto.description,
       duration: dto.duration,
-      status: dto.startedAt ? 'ACTIVE' : 'PENDING',
+      status: dto.startedAt ? 'PENDING' : 'ACTIVE',
       elapsedTime: 0,
       startedAt: dto.startedAt ? new Date(dto.startedAt) : null,
     },
-  });
+  })
 }
+
 
 
   async startSession(sessionId: number) {
@@ -173,4 +178,90 @@ async createSession(dto: CreateSessionDto) {
 
     return { sessionId, message: existing ? 'Player already joined' : 'Joined successfully', remainingTime };
   }
+
+
+async getSessionDetail(sessionId: number) {
+  let session = await this.prisma.session.findUnique({
+    where: { id: sessionId },
+    include: {
+      gameFormat: true,
+      phaseSessions: { include: { phase: true } }
+    }
+  })
+
+  if (!session) throw new NotFoundException('Session not found')
+
+  const players = await this.prisma.playerSession.findMany({
+    where: { sessionId },
+    include: { player: { select: { id: true, name: true, email: true } } }
+  })
+  const totalPlayers = players.length
+
+  if (session.status === 'PENDING' && session.startedAt && session.startedAt.getTime() <= Date.now()) {
+    session = await this.prisma.session.update({
+      where: { id: sessionId },
+      data: { status: 'ACTIVE', startedAt: session.startedAt || new Date() },
+      include: {
+        gameFormat: true,
+        phaseSessions: { include: { phase: true } }
+      }
+    })
+  }
+
+  const totalPhases = session.phaseSessions.length
+  const completedPhases = session.phaseSessions.filter(ps => ps.status === 'COMPLETED').length
+  const engagement = totalPhases ? Math.floor((completedPhases / totalPhases) * 100) : 0
+
+  if (session.status === 'PENDING') {
+    return {
+      id: session.id,
+      teamTitle: session.gameFormat.name,
+      description: session.description,
+      joinCode: session.joinCode,
+      joinLink: session.joiningLink,
+      startTime: session.startedAt,
+      duration: session.duration,
+      totalPlayers,
+      engagement
+    }
+  }
+
+  let elapsed = session.elapsedTime
+  if (session.startedAt && session.status === 'ACTIVE') {
+    elapsed += Math.floor((Date.now() - session.startedAt.getTime()) / 1000)
+  }
+  const remainingTime = Math.max(session.duration - elapsed, 0)
+
+  let activePhase: { id: number, name: string, status: PhaseStatus, remainingTime: number } | null = null
+  const activePhaseSession = session.phaseSessions.find(ps => ps.status === 'ACTIVE')
+
+  if (activePhaseSession) {
+    let phaseElapsed = activePhaseSession.elapsedTime
+    if (activePhaseSession.startedAt && activePhaseSession.status === 'ACTIVE') {
+      phaseElapsed += Math.floor((Date.now() - activePhaseSession.startedAt.getTime()) / 1000)
+    }
+    activePhase = {
+      id: activePhaseSession.phase.id,
+      name: activePhaseSession.phase.name,
+      status: activePhaseSession.status,
+      remainingTime: Math.max(activePhaseSession.timeDuration - phaseElapsed, 0)
+    }
+  }
+
+  return {
+    id: session.id,
+    teamTitle: session.gameFormat.name,
+    description: session.description,
+    joinCode: session.joinCode,
+    joinLink: session.joiningLink,
+    status: session.status,
+    remainingTime,
+    totalPlayers,
+    engagement,
+    activePhase
+  }
+}
+
+
+  
 }

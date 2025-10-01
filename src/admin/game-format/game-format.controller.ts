@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param,ParseIntPipe, Patch, Delete } from '@nestjs/common';
 import { GameFormatService } from './game-format.service';
 import { CreateGameFormatDto } from './dto/create-game-format.dto';
 import { UpdateGameFormatDto } from './dto/update-game-format.dto';
@@ -48,7 +48,10 @@ async getByFacilitator(@Param('id') facilitatorId: string) {
 }
 
 
-
+  @Get(':id/facilitators')
+  async getFacilitators(@Param('id', ParseIntPipe) id: number) {
+    return this.gameFormatService.findFacilitatorsByGameId(id);
+  }
 
 
 }
