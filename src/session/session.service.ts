@@ -232,7 +232,7 @@ async getSessionDetail(sessionId: number) {
   }
   const remainingTime = Math.max(session.duration - elapsed, 0)
 
-  let activePhase: { id: number, name: string, status: PhaseStatus, remainingTime: number } | null = null
+  let activePhase: { id: number, name: string, status: string, remainingTime: number } | null = null
   const activePhaseSession = session.phaseSessions.find(ps => ps.status === 'ACTIVE')
 
   if (activePhaseSession) {
@@ -245,6 +245,13 @@ async getSessionDetail(sessionId: number) {
       name: activePhaseSession.phase.name,
       status: activePhaseSession.status,
       remainingTime: Math.max(activePhaseSession.timeDuration - phaseElapsed, 0)
+    }
+  } else if (session.status === 'ACTIVE') {
+    activePhase = {
+      id: 0,
+      name: 'Default Phase',
+      status: 'ACTIVE',
+      remainingTime
     }
   }
 
