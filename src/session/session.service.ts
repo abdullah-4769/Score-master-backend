@@ -185,7 +185,8 @@ async getSessionDetail(sessionId: number) {
     where: { id: sessionId },
     include: {
       gameFormat: true,
-      phaseSessions: { include: { phase: true } }
+      phaseSessions: { include: { phase: true } },
+      createdBy: { select: { id: true, name: true, role: true } }
     }
   })
 
@@ -193,7 +194,7 @@ async getSessionDetail(sessionId: number) {
 
   const players = await this.prisma.playerSession.findMany({
     where: { sessionId },
-    include: { player: { select: { id: true, name: true, email: true } } }
+    include: { player: { select: { id: true, name: true } } }
   })
   const totalPlayers = players.length
 
@@ -203,7 +204,8 @@ async getSessionDetail(sessionId: number) {
       data: { status: 'ACTIVE', startedAt: session.startedAt || new Date() },
       include: {
         gameFormat: true,
-        phaseSessions: { include: { phase: true } }
+        phaseSessions: { include: { phase: true } },
+        createdBy: { select: { id: true, name: true, role: true } }
       }
     })
   }
@@ -222,7 +224,9 @@ async getSessionDetail(sessionId: number) {
       startTime: session.startedAt,
       duration: session.duration,
       totalPlayers,
-      engagement
+      engagement,
+      createdBy: session.createdBy,
+      createdAt: session.createdAt
     }
   }
 
@@ -265,8 +269,55 @@ async getSessionDetail(sessionId: number) {
     remainingTime,
     totalPlayers,
     engagement,
-    activePhase
+    activePhase,
+    createdBy: session.createdBy,
+    createdAt: session.createdAt
   }
+}
+
+
+
+
+// session.service.ts
+async getAllSessions() {
+  const sessions = await this.prisma.session.findMany({
+    include: {
+      gameFormat: { include: { phases: true } },
+      players: true
+    },
+    orderBy: { startedAt: 'asc' }
+  })
+
+  const now = Date.now()
+
+  const scheduledSessions = sessions
+    .filter(s => s.status === 'PENDING' || (s.status === 'ACTIVE' && s.startedAt && s.startedAt.getTime() > now))
+    .map(s => ({
+      id: s.id,
+      teamTitle: s.gameFormat.name,
+      description: s.description,
+      totalPlayers: s.players.length,
+      totalPhases: s.gameFormat.phases.length,
+      startTime: s.startedAt
+    }))
+
+  const activeSessions = sessions
+    .filter(s => s.status === 'ACTIVE' && s.startedAt && s.startedAt.getTime() <= now)
+    .map(s => {
+      let elapsed = s.elapsedTime
+      if (s.startedAt) elapsed += Math.floor((now - s.startedAt.getTime()) / 1000)
+      const remainingTime = Math.max(s.duration - elapsed, 0)
+      return {
+        id: s.id,
+        teamTitle: s.gameFormat.name,
+        description: s.description,
+        totalPlayers: s.players.length,
+        totalPhases: s.gameFormat.phases.length,
+        remainingTime
+      }
+    })
+
+  return { scheduledSessions, activeSessions }
 }
 
 

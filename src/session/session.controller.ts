@@ -75,4 +75,10 @@ async create(@Body() dto: CreateSessionDto) {
     return this.sessionService.getSessionDetail(sessionId)
   }
 
+
+    @Get('all')
+  getAllSessions() {
+    return this.sessionService.getAllSessions()
+  }
+
 }
