@@ -1,160 +1,157 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../lib/prisma/prisma.service';
 import { CreatePhaseSessionDto } from './dto/create-phase-session.dto';
-import { UpdatePhaseSessionDto } from './dto/update-phase-session.dto';
 
 @Injectable()
 export class PhaseSessionService {
   constructor(private prisma: PrismaService) {}
 
- async create(dto: CreatePhaseSessionDto) {
-  return this.prisma.phaseSession.create({
-    data: {
-      sessionId: dto.sessionId,             // number is fine
-      phaseId: dto.phaseId,      // convert to string
-      timeDuration: dto.timeDuration,
-    },
-  });
-}
+  async create(dto: CreatePhaseSessionDto) {
+    const session = await this.prisma.session.findUnique({
+      where: { id: dto.sessionId },
+      include: { gameFormat: { include: { phases: { orderBy: { order: 'asc' } } } } },
+    });
 
+    if (!session) throw new NotFoundException('Session not found');
 
-  async start(phaseSessionId: number) {
-  const phase = await this.prisma.phaseSession.findUnique({ 
-    where: { id: phaseSessionId }, 
-    include: { session: true } 
-  });
+    const phases = session.gameFormat.phases;
+    if (!phases || phases.length === 0) throw new BadRequestException('No phases found for this game format');
 
-  if (!phase) throw new NotFoundException('Phase session not found');
+    const phaseSessions = await Promise.all(
+      phases.map(phase =>
+        this.prisma.phaseSession.create({
+          data: {
+            sessionId: dto.sessionId,
+            phaseId: phase.id,
+            timeDuration: phase.timeDuration,
+          },
+        }),
+      ),
+    );
 
-  // Check if phase is already completed
-  if (phase.status === 'COMPLETED') {
-    throw new BadRequestException('Phase is already completed. Cannot restart.');
+    return phaseSessions;
   }
 
-  if (phase.status === 'ACTIVE') throw new BadRequestException('Phase is already active');
+  async toggle(phaseSessionId: number) {
+    const phase = await this.prisma.phaseSession.findUnique({
+      where: { id: phaseSessionId },
+      include: { session: true }, // important for type safety
+    });
 
-  if (!phase.session || phase.session.status !== 'ACTIVE') {
-    throw new BadRequestException('Parent session is not active');
-  }
-
-
-  return this.prisma.phaseSession.update({
-    where: { id: phaseSessionId },
-    data: { 
-      status: 'ACTIVE', 
-      startedAt: new Date(), 
-      pausedAt: null 
-    },
-  });
-}
-
-
-  async pause(phaseSessionId: number) {
-    const phase = await this.prisma.phaseSession.findUnique({ where: { id: phaseSessionId } });
-    if (!phase || phase.status !== 'ACTIVE') throw new BadRequestException('Phase is not active');
+    if (!phase) throw new NotFoundException('Phase session not found');
+    if (phase.status === 'COMPLETED') throw new BadRequestException('Phase is already completed');
+    if (!phase.session) throw new BadRequestException('Parent session not found');
 
     const now = new Date();
-    const elapsed = phase.startedAt ? Math.floor((now.getTime() - phase.startedAt.getTime()) / 1000) : 0;
 
-    return this.prisma.phaseSession.update({
-      where: { id: phaseSessionId },
-      data: { status: 'PAUSED', elapsedTime: phase.elapsedTime + elapsed, pausedAt: now, startedAt: null },
-    });
+    // Auto-pause if parent session is not active
+    if (phase.session.status !== 'ACTIVE' && phase.status === 'ACTIVE') {
+      const elapsed = phase.startedAt ? Math.floor((now.getTime() - phase.startedAt.getTime()) / 1000) : 0;
+      const updatedPhase = await this.prisma.phaseSession.update({
+        where: { id: phaseSessionId },
+        data: {
+          status: 'PAUSED',
+          elapsedTime: phase.elapsedTime + elapsed,
+          pausedAt: now,
+          startedAt: null,
+        },
+        include: { session: true }, // keep session for type safety
+      });
+      return updatedPhase;
+    }
+
+    if (phase.status === 'ACTIVE') {
+      const elapsed = phase.startedAt ? Math.floor((now.getTime() - phase.startedAt.getTime()) / 1000) : 0;
+      const updatedPhase = await this.prisma.phaseSession.update({
+        where: { id: phaseSessionId },
+        data: {
+          status: 'PAUSED',
+          elapsedTime: phase.elapsedTime + elapsed,
+          pausedAt: now,
+          startedAt: null,
+        },
+        include: { session: true },
+      });
+      return updatedPhase;
+    } else if (phase.status === 'PAUSED') {
+      if (phase.session.status !== 'ACTIVE') {
+        throw new BadRequestException('Cannot resume while parent session is paused');
+      }
+      const updatedPhase = await this.prisma.phaseSession.update({
+        where: { id: phaseSessionId },
+        data: {
+          status: 'ACTIVE',
+          startedAt: now,
+          pausedAt: null,
+        },
+        include: { session: true },
+      });
+      return updatedPhase;
+    } else {
+      throw new BadRequestException('Phase cannot be toggled from current status');
+    }
   }
 
-async complete(phaseSessionId: number) {
-  const phaseSession = await this.prisma.phaseSession.findUnique({
+async getStatus(phaseSessionId: number) {
+  const phase = await this.prisma.phaseSession.findUnique({
     where: { id: phaseSessionId },
-  });
+    include: { session: true },
+  })
 
-  if (!phaseSession) {
-    throw new NotFoundException('Phase session not found');
+  if (!phase) throw new NotFoundException('Phase session not found')
+
+  const now = new Date()
+  let liveElapsed = phase.elapsedTime
+
+  if (phase.status === 'ACTIVE' && phase.startedAt) {
+    liveElapsed += Math.floor((now.getTime() - phase.startedAt.getTime()) / 1000)
   }
 
-  // Calculate actual elapsed time
-  let elapsed = phaseSession.elapsedTime || 0;
-  if (phaseSession.status === 'ACTIVE' && phaseSession.startedAt) {
-    elapsed += Math.floor((Date.now() - phaseSession.startedAt.getTime()) / 1000);
-  }
-
-  // Update phase session in the database as COMPLETED
-  const updatedPhase = await this.prisma.phaseSession.update({
-    where: { id: phaseSessionId },
-    data: {
-      status: 'COMPLETED',      // Mark as completed
-      elapsedTime: elapsed,      // Save actual elapsed time
-      endedAt: new Date(),       // Set the completion time
-      startedAt: null,           // Clear startedAt
-      pausedAt: null,            // Clear pausedAt
-    },
-  });
+  let remainingTime = phase.timeDuration - liveElapsed
+  if (remainingTime < 0) remainingTime = 0
 
   return {
-    id: updatedPhase.id,
-    phaseId: updatedPhase.phaseId,
-    sessionId: updatedPhase.sessionId,
-    status: updatedPhase.status,
-    timeDuration: updatedPhase.timeDuration,
-    elapsedTime: updatedPhase.elapsedTime,
-    startedAt: updatedPhase.startedAt,
-    pausedAt: updatedPhase.pausedAt,
-    endedAt: updatedPhase.endedAt,
-    createdAt: updatedPhase.createdAt,
-    updatedAt: updatedPhase.updatedAt,
-  };
+    ...phase,
+    elapsedTime: liveElapsed,
+    remainingTime,
+  }
 }
 
 
 
-  async getRemainingTime(phaseSessionId: number) {
-    const phase = await this.prisma.phaseSession.findUnique({ where: { id: phaseSessionId } });
-    if (!phase) throw new NotFoundException('Phase session not found');
-
-    let elapsed = phase.elapsedTime;
-    if (phase.status === 'ACTIVE' && phase.startedAt) {
-      elapsed += Math.floor((Date.now() - phase.startedAt.getTime()) / 1000);
-    }
-
-    return Math.max(phase.timeDuration - elapsed, 0);
-  }
-
-
-
-
-  
- async checkAutoPause(phaseSessionId: number) {
+async start(phaseSessionId: number) {
   const phase = await this.prisma.phaseSession.findUnique({
     where: { id: phaseSessionId },
     include: { session: true },
   });
 
-  if (!phase) {
-    throw new NotFoundException('Phase session not found');
+  if (!phase) throw new NotFoundException('Phase session not found');
+  if (phase.status === 'COMPLETED') throw new BadRequestException('Phase is already completed');
+  if (!phase.session || phase.session.status !== 'ACTIVE') throw new BadRequestException('Parent session is not active');
+
+  const now = new Date();
+
+  if (phase.status === 'ACTIVE') {
+    throw new BadRequestException('Phase is already active');
   }
 
-  if (!phase.session) {
-    throw new NotFoundException('Parent session not found');
+  if (phase.status === 'PAUSED') {
+    // Resume the paused phase
+    return this.prisma.phaseSession.update({
+      where: { id: phaseSessionId },
+      data: { status: 'ACTIVE', startedAt: now, pausedAt: null },
+      include: { session: true },
+    });
   }
 
-  // Pause phase if parent session is not active
-  if (phase.status === 'ACTIVE' && phase.session.status !== 'ACTIVE') {
-    await this.pause(phaseSessionId);
-    phase.status = 'PAUSED'; // update local status after pause
-  }
-
-  // Calculate remaining time
-  let elapsed = phase.elapsedTime;
-  if (phase.status === 'ACTIVE' && phase.startedAt) {
-    elapsed += Math.floor((Date.now() - phase.startedAt.getTime()) / 1000);
-  }
-  const remainingTime = Math.max(phase.timeDuration - elapsed, 0);
-
-  return {
-    id: phase.id,
-    status: phase.status,
-    remainingTime,
-  };
+  // If phase has not started yet
+  return this.prisma.phaseSession.update({
+    where: { id: phaseSessionId },
+    data: { status: 'ACTIVE', startedAt: now, pausedAt: null },
+    include: { session: true },
+  });
 }
+
 
 
 }

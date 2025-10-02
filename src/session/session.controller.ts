@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch, ParseIntPipe, BadRequestException } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch, ParseIntPipe,Query, BadRequestException } from '@nestjs/common';
 import { SessionService } from './session.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { JoinSessionDto } from './dto/join-session.dto';
@@ -79,6 +79,14 @@ async create(@Body() dto: CreateSessionDto) {
     @Get('all')
   getAllSessions() {
     return this.sessionService.getAllSessions()
+  }
+
+
+
+    @Get('facilitator')
+  async getFacilitatorSessions(@Query('facilitatorId') facilitatorId: string) {
+    const id = parseInt(facilitatorId, 10)
+    return this.sessionService.getSessionsForFacilitator(id)
   }
 
 }

@@ -22,6 +22,8 @@ model User {
   roleId     Int?  
   sessions  Session[]
   joinedSessions PlayerSession[]
+    teamPlayers TeamPlayer[]   // users can belong to multiple teams
+  createdTeams Team[]        // teams created by user
    createdGameFormats GameFormat[] @relation("GameFormatFacilitators")
 }
 
@@ -49,7 +51,7 @@ model GameFormat {
   isActive     Boolean   @default(true)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
-
+  teams Team[]
   createdById  Int
   createdBy    User      @relation(fields: [createdById], references: [id])
   facilitators User[] @relation("GameFormatFacilitators")
@@ -150,7 +152,7 @@ model Session {
 
   players        PlayerSession[]
   phaseSessions  PhaseSession[] 
-
+  teams Team[]
 
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
@@ -223,4 +225,30 @@ enum PhaseStatus {
   ACTIVE
   PAUSED
   COMPLETED
+}
+model Team {
+  id           Int           @id @default(autoincrement())
+  name         String
+  description String? 
+  code         String        @unique
+  sessionId    Int
+  session      Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  gameFormatId Int
+  gameFormat   GameFormat    @relation(fields: [gameFormatId], references: [id])
+  createdById  Int
+  createdBy    User          @relation(fields: [createdById], references: [id])
+  players      TeamPlayer[]  // connect users through TeamPlayer
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model TeamPlayer {
+  id        Int   @id @default(autoincrement())
+  teamId    Int
+  team      Team  @relation(fields: [teamId], references: [id])
+  playerId  Int
+  player    User  @relation(fields: [playerId], references: [id])
+  joinedAt  DateTime @default(now())
+
+  @@unique([teamId, playerId])
 }

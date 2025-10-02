@@ -103,18 +103,47 @@ async createSession(dto: CreateSessionDto) {
     return Math.max(session.duration - elapsed, 0);
   }
 
-  async joinSession(playerId: number, joinCode: string) {
-    const session = await this.prisma.session.findUnique({ where: { joinCode } });
-    if (!session) throw new NotFoundException('Session not found');
-    if (session.status !== 'ACTIVE') throw new BadRequestException('Session is not active');
+async joinSession(playerId: number, joinCode: string) {
+  const session = await this.prisma.session.findUnique({ where: { joinCode } })
+  if (!session) throw new NotFoundException('Session not found')
 
-    const existing = await this.prisma.playerSession.findFirst({ where: { playerId, sessionId: session.id } });
-    if (!existing) await this.prisma.playerSession.create({ data: { playerId, sessionId: session.id } });
-    this.websocket.addUserToSession(playerId, session.id.toString());
-
-    const remainingTime = await this.getRemainingTime(session.id);
-    return { message: 'Joined successfully', sessionId: session.id, remainingTime, joiningLink: session.joiningLink };
+  if (session.status === 'COMPLETED') {
+    throw new BadRequestException('Session is already completed')
   }
+
+  const existing = await this.prisma.playerSession.findFirst({
+    where: { playerId, sessionId: session.id },
+  })
+
+  if (!existing) {
+    await this.prisma.playerSession.create({
+      data: { playerId, sessionId: session.id },
+    })
+  }
+
+  this.websocket.addUserToSession(playerId, session.id.toString())
+
+  const remainingTime = await this.getRemainingTime(session.id)
+
+  if (session.status === 'PENDING' || session.status === 'PAUSED') {
+    return {
+      message: 'Joined successfully, session not active yet',
+      status: session.status,
+      sessionId: session.id,
+      remainingTime,
+      joiningLink: session.joiningLink,
+    }
+  }
+
+  return {
+    message: 'Joined successfully',
+    status: session.status,
+    sessionId: session.id,
+    remainingTime,
+    joiningLink: session.joiningLink,
+  }
+}
+
 
   async getPlayersInSession(sessionId: number) {
     const players = await this.prisma.playerSession.findMany({
@@ -320,6 +349,50 @@ async getAllSessions() {
   return { scheduledSessions, activeSessions }
 }
 
+async getSessionsForFacilitator(facilitatorId: number) {
+  const sessions = await this.prisma.session.findMany({
+    include: {
+      gameFormat: {
+        include: {
+          phases: true,
+          facilitators: true
+        }
+      },
+      players: true
+    },
+    orderBy: { startedAt: 'asc' }
+  })
 
-  
+  // Filter sessions where the facilitator is part of the game format
+  const facilitatorSessions = sessions.filter(s =>
+    s.gameFormat.facilitators.some(f => f.id === facilitatorId)
+  )
+
+  const scheduledSessions = facilitatorSessions
+    .filter(s => s.status === 'PENDING')
+    .map(s => ({
+      id: s.id,
+      teamTitle: s.gameFormat.name,
+      description: s.description,
+      totalPlayers: s.players.length,
+      totalPhases: s.gameFormat.phases.length,
+      startTime: s.startedAt
+    }))
+
+  const activeSessions = facilitatorSessions
+    .filter(s => s.status === 'ACTIVE' || s.status === 'PAUSED')
+    .map(s => ({
+      id: s.id,
+      teamTitle: s.gameFormat.name,
+      description: s.description,
+      totalPlayers: s.players.length,
+      totalPhases: s.gameFormat.phases.length,
+      status: s.status,
+      remainingTime: s.duration - s.elapsedTime
+    }))
+
+  return { scheduledSessions, activeSessions }
+}
+
+
 }

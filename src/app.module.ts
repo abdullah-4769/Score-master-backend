@@ -11,7 +11,7 @@ import { SessionModule } from './session/session.module';
 import { GameFormatFetchDataModule } from './gameformatfetchdata/gameformatfetchdata.module'
 import { PhaseSessionModule } from './phase-session/phase-session.module';
 import { WebsocketModule } from './websocket/websocket.module';
-
+import { TeamModule } from './team/team.module'
 
 @Module({
   imports: [
@@ -25,6 +25,7 @@ import { WebsocketModule } from './websocket/websocket.module';
     GameFormatFetchDataModule,
     PhaseSessionModule,
     WebsocketModule,
+    TeamModule,
 
   ],
   providers: [PrismaService, JwtService],
