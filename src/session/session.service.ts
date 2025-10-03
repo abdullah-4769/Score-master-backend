@@ -123,26 +123,19 @@ async joinSession(playerId: number, joinCode: string) {
 
   this.websocket.addUserToSession(playerId, session.id.toString())
 
-  const remainingTime = await this.getRemainingTime(session.id)
-
-  if (session.status === 'PENDING' || session.status === 'PAUSED') {
-    return {
-      message: 'Joined successfully, session not active yet',
-      status: session.status,
-      sessionId: session.id,
-      remainingTime,
-      joiningLink: session.joiningLink,
-    }
-  }
-
-  return {
-    message: 'Joined successfully',
+  const response = {
+    message: session.status === 'PENDING' || session.status === 'PAUSED'
+      ? 'Joined successfully, session not active yet'
+      : 'Joined successfully',
     status: session.status,
     sessionId: session.id,
-    remainingTime,
+    gameFormatId: session.gameFormatId,
     joiningLink: session.joiningLink,
   }
+
+  return response
 }
+
 
 
   async getPlayersInSession(sessionId: number) {
