@@ -22,6 +22,8 @@ model User {
   roleId     Int?  
   sessions  Session[]
   joinedSessions PlayerSession[]
+    submittedAnswers PlayerAnswer[] @relation("PlayerAnswers")
+  facilitatedAnswers PlayerAnswer[] @relation("FacilitatedAnswers")
     teamPlayers TeamPlayer[]   // users can belong to multiple teams
   createdTeams Team[]        // teams created by user
    createdGameFormats GameFormat[] @relation("GameFormatFacilitators")
@@ -76,7 +78,7 @@ model Phase {
   requiredScore  Int?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
-
+  playerAnswers  PlayerAnswer[] @relation("PhasePlayerAnswers")
   gameFormat     GameFormat   @relation(fields: [gameFormatId], references: [id])
   questions      Question[]
   phaseSessions  PhaseSession[]
@@ -113,7 +115,7 @@ model Question {
   correctSequence Json?       // correct order for sequence puzzles
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
-
+  playerAnswers PlayerAnswer[] @relation("QuestionPlayerAnswers")
   phase    Phase    @relation(fields: [phaseId], references: [id])
 
   @@unique([phaseId, order])
@@ -153,7 +155,7 @@ model Session {
   players        PlayerSession[]
   phaseSessions  PhaseSession[] 
   teams Team[]
-
+  playerAnswers  PlayerAnswer[] @relation("SessionPlayerAnswers")
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 }
@@ -228,16 +230,14 @@ enum PhaseStatus {
 }
 model Team {
   id           Int           @id @default(autoincrement())
-  name         String
-  description String? 
-  code         String        @unique
+  nickname     String
   sessionId    Int
   session      Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   gameFormatId Int
   gameFormat   GameFormat    @relation(fields: [gameFormatId], references: [id])
   createdById  Int
   createdBy    User          @relation(fields: [createdById], references: [id])
-  players      TeamPlayer[]  // connect users through TeamPlayer
+  players      TeamPlayer[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -251,4 +251,37 @@ model TeamPlayer {
   joinedAt  DateTime @default(now())
 
   @@unique([teamId, playerId])
+}
+
+
+
+
+model PlayerAnswer {
+  id            Int       @id @default(autoincrement())
+
+  playerId      Int
+  player        User      @relation("PlayerAnswers", fields: [playerId], references: [id])
+
+  facilitatorId Int
+  facilitator   User      @relation("FacilitatedAnswers", fields: [facilitatorId], references: [id])
+
+  sessionId     Int
+  session       Session   @relation("SessionPlayerAnswers", fields: [sessionId], references: [id])
+
+  phaseId       Int
+  phase         Phase     @relation("PhasePlayerAnswers", fields: [phaseId], references: [id])
+
+  questionId    Int
+  question      Question  @relation("QuestionPlayerAnswers", fields: [questionId], references: [id])
+
+  answer        String?
+  score         Int?
+  feedback      String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([playerId, questionId, sessionId])
+  @@index([sessionId])
+  @@index([phaseId])
 }

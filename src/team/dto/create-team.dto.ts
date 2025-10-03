@@ -1,6 +1,6 @@
+// create-team.dto.ts
 export class CreateTeamDto {
-  name: string
-  description?: string
+  nickname: string
   sessionId: number
   gameFormatId: number
   createdById: number

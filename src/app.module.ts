@@ -12,7 +12,7 @@ import { GameFormatFetchDataModule } from './gameformatfetchdata/gameformatfetch
 import { PhaseSessionModule } from './phase-session/phase-session.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { TeamModule } from './team/team.module'
-
+import { PlayerAnswerModule } from './player-answer/player-answer.module'
 @Module({
   imports: [
     AuthModule,
@@ -26,6 +26,7 @@ import { TeamModule } from './team/team.module'
     PhaseSessionModule,
     WebsocketModule,
     TeamModule,
+    PlayerAnswerModule,
 
   ],
   providers: [PrismaService, JwtService],

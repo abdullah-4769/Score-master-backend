@@ -394,5 +394,56 @@ async getSessionsForFacilitator(facilitatorId: number) {
   return { scheduledSessions, activeSessions }
 }
 
+async getAllSessionsWithCode() {
+  const sessions = await this.prisma.session.findMany({
+    include: {
+      gameFormat: { include: { phases: true } },
+      players: true,
+    },
+    orderBy: { startedAt: 'asc' },
+  })
+
+  const now = Date.now()
+
+  const scheduledSessions = sessions
+    .filter(
+      s =>
+        s.status === 'PENDING' ||
+        (s.status === 'ACTIVE' && s.startedAt && s.startedAt.getTime() > now),
+    )
+    .map(s => ({
+      id: s.id,
+      teamTitle: s.gameFormat.name,
+      description: s.description,
+      totalPlayers: s.players.length,
+      totalPhases: s.gameFormat.phases.length,
+      startTime: s.startedAt,
+      joinCode: s.joinCode,
+    }))
+
+  const activeSessions = sessions
+    .filter(
+      s => s.status === 'ACTIVE' && s.startedAt && s.startedAt.getTime() <= now,
+    )
+    .map(s => {
+      let elapsed = s.elapsedTime
+      if (s.startedAt) {
+        elapsed += Math.floor((now - s.startedAt.getTime()) / 1000)
+      }
+      const remainingTime = Math.max(s.duration - elapsed, 0)
+
+      return {
+        id: s.id,
+        teamTitle: s.gameFormat.name,
+        description: s.description,
+        totalPlayers: s.players.length,
+        totalPhases: s.gameFormat.phases.length,
+        remainingTime,
+        joinCode: s.joinCode,
+      }
+    })
+
+  return { scheduledSessions, activeSessions }
+}
 
 }

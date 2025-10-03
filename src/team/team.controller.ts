@@ -1,7 +1,6 @@
 import { Controller, Post, Body, Get, Param } from '@nestjs/common'
 import { TeamService } from './team.service'
 import { CreateTeamDto } from './dto/create-team.dto'
-import { JoinTeamDto } from './dto/join-team.dto'
 
 @Controller('team')
 export class TeamController {
@@ -12,13 +11,21 @@ export class TeamController {
     return this.teamService.createTeam(dto)
   }
 
-  @Post('join')
-  joinTeam(@Body() dto: JoinTeamDto) {
-    return this.teamService.joinTeam(dto)
+  @Get('session/:sessionId/members')
+  getSessionMembers(@Param('sessionId') sessionId: string) {
+    return this.teamService.getSessionMembers(Number(sessionId))
   }
 
-  @Get(':id/status')
-  getTeamStatus(@Param('id') id: string) {
-    return this.teamService.getTeamStatus(Number(id))
+ @Get('session/:sessionId/phase/:phaseId')
+  getPlayerPhaseStatus(
+    @Param('sessionId') sessionId: string,
+    @Param('phaseId') phaseId: string
+  ) {
+    return this.teamService.getPlayerPhaseStatus(
+      Number(sessionId),
+      Number(phaseId)
+    )
   }
+
+
 }

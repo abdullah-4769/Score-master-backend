@@ -1,4 +1,4 @@
-import { Injectable ,NotFoundException} from '@nestjs/common'
+import { Injectable ,NotFoundException,BadRequestException} from '@nestjs/common'
 import { PrismaService } from '../../lib/prisma/prisma.service'
 import { CreateQuestionDto } from './dto/create-question.dto'
 import { UpdateQuestionDto } from './dto/update-question.dto'
@@ -139,6 +139,61 @@ async generate(dto: {
       })),
     }
   }
+ async getQuestionsForSession(gameFormatId: number, sessionId: number) {
+    // Check if session exists
+    const session = await this.prisma.session.findUnique({
+      where: { id: sessionId },
+    })
+
+    if (!session) throw new NotFoundException('Session not found')
+
+    // Check if session is active
+    if (session.status !== 'ACTIVE') {
+      throw new BadRequestException('Session is not active')
+    }
+
+    // Fetch all phases of the game format with questions
+    const phases = await this.prisma.phase.findMany({
+      where: { gameFormatId },
+      include: {
+        questions: true, // include all questions
+      },
+      orderBy: { order: 'asc' },
+    })
+
+    return {
+      sessionId: session.id,
+      gameFormatId,
+      phases,
+    }
+  }
+
+async getGameFormatBySession(sessionId: number) {
+  const session = await this.prisma.session.findUnique({
+    where: { id: sessionId },
+    include: {
+      gameFormat: {
+        include: {
+          phases: {
+            include: {
+              questions: false,
+            },
+            orderBy: { order: 'asc' },
+          },
+        },
+      },
+    },
+  })
+
+  if (!session) throw new NotFoundException('Session not found')
+
+  return {
+    sessionId: session.id,
+    gameFormat: session.gameFormat,
+  }
+}
+
+
 
 
 }

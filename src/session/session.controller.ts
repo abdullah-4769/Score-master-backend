@@ -89,4 +89,11 @@ async create(@Body() dto: CreateSessionDto) {
     return this.sessionService.getSessionsForFacilitator(id)
   }
 
+
+  @Get('with-code')
+  async getAllSessionsWithCode() {
+    return this.sessionService.getAllSessionsWithCode()
+  }
+
+
 }

@@ -44,6 +44,20 @@ export class QuestionController {
   async getTeamPhaseWithQuestions(@Param('gameId', ParseIntPipe) gameId: number) {
     return this.service.findTeamPhaseWithQuestions(gameId)
   }
+  @Get('questions-for-session/:gameFormatId/:sessionId')
+  async getQuestions(
+    @Param('gameFormatId', ParseIntPipe) gameFormatId: number,
+    @Param('sessionId', ParseIntPipe) sessionId: number,
+  ) {
+    return this.service.getQuestionsForSession(gameFormatId, sessionId)
+  }
+
+
+@Get('session/:id/game-format')
+async getGameFormatBySessionId(@Param('id', ParseIntPipe) sessionId: number) {
+  return this.service.getGameFormatBySession(sessionId)
+}
+
 
 
 }
