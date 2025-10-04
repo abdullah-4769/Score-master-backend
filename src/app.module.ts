@@ -11,8 +11,14 @@ import { SessionModule } from './session/session.module';
 import { GameFormatFetchDataModule } from './gameformatfetchdata/gameformatfetchdata.module'
 import { PhaseSessionModule } from './phase-session/phase-session.module';
 import { WebsocketModule } from './websocket/websocket.module';
-import { TeamModule } from './team/team.module'
-import { PlayerAnswerModule } from './player-answer/player-answer.module'
+import { TeamModule } from './team/team.module';
+import { PlayerAnswerModule } from './player-answer/player-answer.module';
+import { EvaluationModule } from "./evaluation/evaluation.module";
+import { ScoreModule } from './score/score.module';
+
+import { UserModule } from './user/user.module'
+
+
 @Module({
   imports: [
     AuthModule,
@@ -27,6 +33,9 @@ import { PlayerAnswerModule } from './player-answer/player-answer.module'
     WebsocketModule,
     TeamModule,
     PlayerAnswerModule,
+        ScoreModule,
+    EvaluationModule,
+    UserModule
 
   ],
   providers: [PrismaService, JwtService],

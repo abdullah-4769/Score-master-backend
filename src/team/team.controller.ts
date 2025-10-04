@@ -27,5 +27,10 @@ export class TeamController {
     )
   }
 
+@Get('session/:sessionId/players')
+getCreatedTeams(@Param('sessionId') sessionId: string) {
+  return this.teamService.getCreatedTeams(Number(sessionId))
+}
+
 
 }

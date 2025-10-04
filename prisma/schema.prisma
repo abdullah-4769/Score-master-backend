@@ -22,6 +22,7 @@ model User {
   roleId     Int?  
   sessions  Session[]
   joinedSessions PlayerSession[]
+    scores Score[] 
     submittedAnswers PlayerAnswer[] @relation("PlayerAnswers")
   facilitatedAnswers PlayerAnswer[] @relation("FacilitatedAnswers")
     teamPlayers TeamPlayer[]   // users can belong to multiple teams
@@ -81,6 +82,7 @@ model Phase {
   playerAnswers  PlayerAnswer[] @relation("PhasePlayerAnswers")
   gameFormat     GameFormat   @relation(fields: [gameFormatId], references: [id])
   questions      Question[]
+    scores Score[] 
   phaseSessions  PhaseSession[]
 
   @@unique([gameFormatId, order])
@@ -115,6 +117,7 @@ model Question {
   correctSequence Json?       // correct order for sequence puzzles
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+    scores Score[]
   playerAnswers PlayerAnswer[] @relation("QuestionPlayerAnswers")
   phase    Phase    @relation(fields: [phaseId], references: [id])
 
@@ -151,7 +154,7 @@ model Session {
   startedAt      DateTime?
   pausedAt       DateTime?
   endedAt        DateTime?
-
+  scores Score[]
   players        PlayerSession[]
   phaseSessions  PhaseSession[] 
   teams Team[]
@@ -274,7 +277,7 @@ model PlayerAnswer {
   questionId    Int
   question      Question  @relation("QuestionPlayerAnswers", fields: [questionId], references: [id])
 
-  answer        String?
+  answerData        Json?
   score         Int?
   feedback      String?
 
@@ -282,6 +285,44 @@ model PlayerAnswer {
   updatedAt     DateTime  @updatedAt
 
   @@unique([playerId, questionId, sessionId])
+  @@index([sessionId])
+  @@index([phaseId])
+}
+
+
+
+model Score {
+  id            Int       @id @default(autoincrement())
+
+  questionId    Int
+  question      Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  playerId      Int
+  player        User      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  sessionId     Int
+  session       Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  phaseId       Int
+  phase         Phase     @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  finalScore        Float
+  relevanceScore    Float
+  suggestion        String
+  qualityAssessment String
+  description       String
+
+  charityScore        Int
+  strategicThinking   Int
+  feasibilityScore    Int
+  innovationScore     Int
+  points              Int
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([questionId])
+  @@index([playerId])
   @@index([sessionId])
   @@index([phaseId])
 }

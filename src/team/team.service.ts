@@ -87,6 +87,37 @@ async getSessionMembers(sessionId: number) {
 
     return result
   }
+async getCreatedTeams(sessionId: number) {
+  
+  const teams = await this.prisma.team.findMany({
+    where: { sessionId },
+    include: {
+      createdBy: true, 
+      players: { 
+        include: { player: true } 
+      }
+    }
+  })
+
+
+  return teams.map(team => ({
+    teamId: team.id,
+    nickname: team.nickname,
+    createdAt: team.createdAt,
+    createdBy: {
+      id: team.createdBy.id,
+      name: team.createdBy.name,
+      email: team.createdBy.email
+    },
+    players: team.players.map(tp => ({
+      id: tp.player.id,
+      name: tp.player.name,
+      email: tp.player.email,
+      joinedAt: tp.joinedAt
+    }))
+  }))
+}
+
 
 
 

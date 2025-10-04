@@ -1,9 +1,11 @@
-// src/player-answer/dto/create-player-answer.dto.ts
-import { IsInt, IsString, IsOptional } from 'class-validator'
+import { IsInt, IsOptional, IsJSON } from 'class-validator'
 
 export class CreatePlayerAnswerDto {
   @IsInt()
   playerId: number
+
+  @IsInt()
+  facilitatorId: number
 
   @IsInt()
   sessionId: number
@@ -14,10 +16,7 @@ export class CreatePlayerAnswerDto {
   @IsInt()
   questionId: number
 
-  @IsInt()
-  facilitatorId: number
-
   @IsOptional()
-  @IsString()
-  answer?: string
+  @IsJSON()
+  answerData?: any
 }

@@ -1,4 +1,3 @@
-// src/player-answer/player-answer.service.ts
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../lib/prisma/prisma.service'
 import { CreatePlayerAnswerDto } from './dto/create-player-answer.dto'
@@ -17,30 +16,70 @@ export class PlayerAnswerService {
         },
       },
       update: {
-        answer: dto.answer,
+        answerData: dto.answerData,
         facilitatorId: dto.facilitatorId,
       },
       create: {
-        ...dto,
+        playerId: dto.playerId,
+        facilitatorId: dto.facilitatorId,
+        sessionId: dto.sessionId,
+        phaseId: dto.phaseId,
+        questionId: dto.questionId,
+        answerData: dto.answerData,
       },
     })
   }
 
-  async getAnswersByFacilitator(facilitatorId: number, sessionId: number) {
-    return this.prisma.playerAnswer.findMany({
-      where: {
-        facilitatorId,
-        sessionId,
+async getAnswersByFacilitatorAndPhase(facilitatorId: number, phaseId: number) {
+  // fetch all questions in this phase
+  const questions = await this.prisma.question.findMany({
+    where: { phaseId },
+    orderBy: { order: 'asc' },
+  })
+
+  // fetch all answers for this facilitator in this phase
+  const answers = await this.prisma.playerAnswer.findMany({
+    where: {
+      facilitatorId,
+      phaseId,
+    },
+    include: {
+      player: true,
+      question: true,
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  })
+
+  // group answers under their questions
+  const result = questions.map(q => {
+    const questionAnswers = answers.filter(a => a.questionId === q.id)
+    return {
+      question: {
+        id: q.id,
+        text: q.questionText,
+        scenario: q.scenario,
+        type: q.type,
+        point: q.point,
       },
-      include: {
-        player: true,
-        question: true,
-        phase: true,
-        session: true,
-      },
-      orderBy: {
-        createdAt: 'asc',
-      },
-    })
-  }
+      answers: questionAnswers.map(a => ({
+        player: {
+          id: a.player.id,
+          name: a.player.name,
+        },
+        answerData: a.answerData,
+        submittedAt: a.createdAt,
+      })),
+    }
+  })
+
+  return result
+}
+
+async deleteAllAnswers() {
+  return this.prisma.playerAnswer.deleteMany({})
+}
+
+
 }
