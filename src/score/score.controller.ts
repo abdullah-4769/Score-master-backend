@@ -44,7 +44,6 @@ getByQuestionAndPlayer(
 }
 
 
-// score.controller.ts
 
 @Get('ranking/session/:sessionId')
 getPlayerRanking(@Param('sessionId') sessionId: string) {
@@ -55,6 +54,22 @@ getPlayerRanking(@Param('sessionId') sessionId: string) {
 getSessionRanking(@Param('sessionId') sessionId: string) {
   return this.scoreService.getSessionRanking(Number(sessionId))
 }
+
+@Get('ranking/session/:sessionId/phase/:phaseId')
+getPlayerRankingByPhase(
+  @Param('sessionId') sessionId: string,
+  @Param('phaseId') phaseId: string
+) {
+  return this.scoreService.getPlayerRankingByPhase(
+    Number(sessionId),
+    Number(phaseId)
+  )
+}
+
+  @Get(':sessionId/analytics')
+  getSessionAnalytics(@Param('sessionId') sessionId: string) {
+    return this.scoreService.getSessionAnalytics(Number(sessionId))
+  }
 
 
 }
