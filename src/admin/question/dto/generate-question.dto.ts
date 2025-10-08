@@ -3,4 +3,5 @@ export class GenerateQuestionDto {
   type: 'MCQ' | 'OPEN_ENDED' | 'PUZZLE' | 'SIMULATION'
   gameName: string
   phaseName: string
+    language?: string
 }

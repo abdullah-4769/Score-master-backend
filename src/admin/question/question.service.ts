@@ -66,8 +66,9 @@ async generate(dto: {
   type: 'MCQ' | 'OPEN_ENDED' | 'PUZZLE' | 'SIMULATION'
   gameName: string
   phaseName: string
+    language?: string
 }) {
-  const prompt = questionprompt(dto.type, dto.gameName, dto.phaseName, dto.topic)
+  const prompt = questionprompt(dto.type, dto.gameName, dto.phaseName, dto.topic, dto.language)
 
   const response = await llm.call([new HumanMessage(prompt)])
 

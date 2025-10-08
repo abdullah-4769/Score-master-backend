@@ -10,6 +10,7 @@ Details:
 Scenario: ${dto.scenario || "N/A"}
 Question: ${dto.questionText}
 Player Answer: ${dto.playerAnswer}
+Language: ${dto.language}
 
 Instructions:
 - "finalScore" must be a number between 0 and 100
@@ -18,7 +19,8 @@ Instructions:
 - "qualityAssessment" must be exactly "high", "average", or "low"
 - "description" should briefly explain why the score was given
 - "scoreBreakdown" must contain 4 fields each scored as "x/25"
-- "feedback" should give a simple improvement tip in one sentence
+- "feedback" should give a simple improvement tip in one one paragraph of 20 words
+- give responses in the language specified by the "language" field
 
 Respond ONLY in valid JSON with this structure:
 

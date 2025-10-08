@@ -11,4 +11,8 @@ export class EvaluateQuestionDto {
 
   @IsString()
   playerAnswer: string
+
+  @IsString()
+  language: string
+
 }
