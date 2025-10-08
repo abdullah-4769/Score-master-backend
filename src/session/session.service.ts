@@ -239,8 +239,8 @@ async getSessionDetail(sessionId: number) {
   if (session.status === 'PENDING') {
     return {
       id: session.id,
-      teamTitle: session.gameFormat.name,
-      description: session.description,
+      description: session.gameFormat.description,
+      sessiontitle: session.description,
       joinCode: session.joinCode,
       joinLink: session.joiningLink,
       startTime: session.startedAt,
@@ -283,8 +283,8 @@ async getSessionDetail(sessionId: number) {
 
   return {
     id: session.id,
-    teamTitle: session.gameFormat.name,
-    description: session.description,
+    description: session.gameFormat.description,
+    sessiontitle: session.description,
     joinCode: session.joinCode,
     joinLink: session.joiningLink,
     status: session.status,
@@ -300,7 +300,7 @@ async getSessionDetail(sessionId: number) {
 
 
 
-// session.service.ts
+
 async getAllSessions() {
   const sessions = await this.prisma.session.findMany({
     include: {
@@ -316,8 +316,8 @@ async getAllSessions() {
     .filter(s => s.status === 'PENDING' || (s.status === 'ACTIVE' && s.startedAt && s.startedAt.getTime() > now))
     .map(s => ({
       id: s.id,
-      teamTitle: s.gameFormat.name,
-      description: s.description,
+      description: s.gameFormat.description,
+      sessiontitle: s.description,
       totalPlayers: s.players.length,
       totalPhases: s.gameFormat.phases.length,
       startTime: s.startedAt
@@ -331,8 +331,8 @@ async getAllSessions() {
       const remainingTime = Math.max(s.duration - elapsed, 0)
       return {
         id: s.id,
-        teamTitle: s.gameFormat.name,
-        description: s.description,
+        description: s.gameFormat.description,
+        sessiontitle: s.description,
         totalPlayers: s.players.length,
         totalPhases: s.gameFormat.phases.length,
         remainingTime
@@ -365,8 +365,8 @@ async getSessionsForFacilitator(facilitatorId: number) {
     .filter(s => s.status === 'PENDING')
     .map(s => ({
       id: s.id,
-      teamTitle: s.gameFormat.name,
-      description: s.description,
+      description: s.gameFormat.description,
+      sessiontitle: s.description,
       totalPlayers: s.players.length,
       totalPhases: s.gameFormat.phases.length,
       startTime: s.startedAt
@@ -376,8 +376,8 @@ async getSessionsForFacilitator(facilitatorId: number) {
     .filter(s => s.status === 'ACTIVE' || s.status === 'PAUSED')
     .map(s => ({
       id: s.id,
-      teamTitle: s.gameFormat.name,
-      description: s.description,
+      description: s.gameFormat.description,
+      sessiontitle: s.description,
       totalPlayers: s.players.length,
       totalPhases: s.gameFormat.phases.length,
       status: s.status,
@@ -406,8 +406,8 @@ async getAllSessionsWithCode() {
     )
     .map(s => ({
       id: s.id,
-      teamTitle: s.gameFormat.name,
-      description: s.description,
+      description: s.gameFormat.description,
+      sessiontitle: s.description,
       totalPlayers: s.players.length,
       totalPhases: s.gameFormat.phases.length,
       startTime: s.startedAt,
@@ -427,8 +427,8 @@ async getAllSessionsWithCode() {
 
       return {
         id: s.id,
-        teamTitle: s.gameFormat.name,
-        description: s.description,
+        description: s.gameFormat.description,
+        sessiontitle: s.description,
         totalPlayers: s.players.length,
         totalPhases: s.gameFormat.phases.length,
         remainingTime,

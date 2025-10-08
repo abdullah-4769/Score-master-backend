@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../lib/prisma/prisma.service'
 
 @Injectable()
@@ -6,70 +6,123 @@ export class UserService {
   constructor(private prisma: PrismaService) {}
 
   async getUserStats(userId: number) {
-    // Get all player sessions with related session info
-    const sessions = await this.prisma.playerSession.findMany({
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { sessions: true, joinedSessions: true, createdTeams: true, gameFormats: true }
+    })
+
+    if (!user) throw new BadRequestException('User not found')
+    if (user.role?.toLowerCase() !== 'player') throw new BadRequestException('User is not a player')
+
+    const playerInfo = { id: user.id, name: user.name, email: user.email }
+
+    const playerSessions = await this.prisma.playerSession.findMany({
       where: { playerId: userId },
       include: {
         session: {
           include: {
-            players: true,        // to count total players
-            phaseSessions: true   // to count total phases
+            players: { include: { player: true } },
+            gameFormat: { include: { phases: true } }
           }
         }
       },
       orderBy: { joinedAt: 'desc' }
     })
 
-    // Map recent sessions with extra info
-    const recentSessions = sessions.slice(0, 5).map(ps => ({
-      id: ps.session.id,
-      description: ps.session.description,
-      joinCode: ps.session.joinCode,
-      status: ps.session.status,
-      totalPlayers: ps.session.players.length,
-      totalPhases: ps.session.phaseSessions.length,
-      joinedAt: ps.joinedAt
+    const allScores = await this.prisma.score.findMany({
+      where: { sessionId: { in: playerSessions.map(ps => ps.sessionId) } }
+    })
+
+    const avgScore = allScores.length
+      ? allScores.reduce((sum, s) => sum + s.finalScore, 0) / allScores.length
+      : 0
+
+    const totalMVP = await this.calculateMVPCount(playerSessions.map(ps => ps.sessionId), allScores)
+
+    const sessionStats = { totalSessions: playerSessions.length, avgScore, totalMVP }
+
+    const recentSessions = await Promise.all(playerSessions.slice(0, 5).map(async ps => {
+      const session = ps.session
+
+      const sessionScores = await this.prisma.score.findMany({
+        where: { sessionId: session.id }
+      })
+
+      const sortedScores = sessionScores.map(s => s.finalScore).sort((a, b) => b - a)
+      const playerScore = sessionScores.find(s => s.playerId === userId)?.finalScore || 0
+      const rank = sortedScores.indexOf(playerScore) + 1
+
+      return {
+        sessionId: session.id,
+        sessionName: session.gameFormat.name,
+        sessionDescription: session.description,
+        totalPhases: session.gameFormat.phases.length,
+        totalPlayers: session.players.length,
+        status: session.status,
+        rank
+      }
     }))
 
-    // Get all scores for user
-    const scores = await this.prisma.score.findMany({
-      where: { playerId: userId }
-    })
+    return { playerInfo, sessionStats, user, recentSessions }
+  }
 
-    // Average score
-    const avgScore =
-      scores.length > 0
-        ? scores.reduce((sum, s) => sum + s.finalScore, 0) / scores.length
-        : 0
+  private async calculateMVPCount(sessionIds: number[], scores: any[]) {
+    let totalMVP = 0
+    for (const sessionId of sessionIds) {
+      const sessionScores = scores.filter(s => s.sessionId === sessionId)
+      const maxScore = Math.max(...sessionScores.map(s => s.finalScore))
+      const playerScore = sessionScores[0]?.playerId ? sessionScores.find(s => s.playerId === sessionScores[0].playerId)?.finalScore : 0
+      if (playerScore === maxScore) totalMVP++
+    }
+    return totalMVP
+  }
 
-    // Total MVPs (highest score in session)
-    const mvpSessions = await this.prisma.score.groupBy({
-      by: ['sessionId'],
-      where: { playerId: userId },
-      _max: { finalScore: true }
-    })
-
-    const totalMVP = mvpSessions.filter(s =>
-      s._max.finalScore === Math.max(...scores.map(sc => sc.finalScore))
-    ).length
-
-    // Full user state
+ async getFacilitatorStats(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        sessions: true,
-        scores: true,
-        createdTeams: true,
-        joinedSessions: true,
-        gameFormats: true
-      }
+      include: { sessions: true, joinedSessions: true, createdTeams: true, gameFormats: true }
     })
 
-    return {
-      avgScore,
-      totalMVP,
-      user,
-      recentSessions
+  if (!user) throw new BadRequestException('User not found')
+
+const role = user.role?.toLowerCase()
+if (role !== 'facilitator' && role !== 'admin') {
+  throw new BadRequestException('Access denied, only facilitator or admin allowed')
+}
+
+    const playerInfo = { id: user.id, name: user.name, email: user.email }
+
+    const facilitatorSessions = await this.prisma.session.findMany({
+      where: { createdById: userId },
+      include: {
+        players: true,
+        gameFormat: { include: { phases: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
+
+    const totalPlayers = facilitatorSessions.reduce((sum, s) => sum + s.players.length, 0)
+    const completedSessions = facilitatorSessions.filter(s => s.status === 'COMPLETED').length
+    const successRate = facilitatorSessions.length ? (completedSessions / facilitatorSessions.length) * 100 : 0
+
+    const sessionStats = {
+      totalSessions: facilitatorSessions.length,
+      totalManagePlayer: totalPlayers,
+      successRate
     }
+
+    const recentSessions = facilitatorSessions.slice(0, 5).map(session => ({
+      sessionId: session.id,
+      sessionName: session.gameFormat.name,
+      sessionDescription: session.description,
+      totalPhases: session.gameFormat.phases.length,
+      totalPlayers: session.players.length,
+      status: session.status
+    }))
+
+    return { playerInfo, sessionStats, user, recentSessions }
   }
+
+
+
 }

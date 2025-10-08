@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/lib/prisma/prisma.service';
 import { CreateGameFormatDto } from './dto/create-game-format.dto';
 import { UpdateGameFormatDto } from './dto/update-game-format.dto';
+import { time } from 'console';
 
 @Injectable()
 export class GameFormatService {
@@ -117,6 +118,7 @@ async findByFacilitatorId(facilitatorId: number) {
         description: game.description,
         mode: game.mode,
         totalPhases: game.totalPhases,
+        timeDuration: game.timeDuration,
         isActive: game.isActive,
         scoringType: finalScoringType,
       };

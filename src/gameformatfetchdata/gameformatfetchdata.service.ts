@@ -63,7 +63,7 @@ async getFormatWithPhasesSummary(formatId: number) {
           id: true,
           name: true,
           order: true,
-          timeDuration: true,   // include time duration
+          timeDuration: true,  
         },
         orderBy: { order: 'asc' },
       },
