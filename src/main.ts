@@ -1,19 +1,16 @@
-import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import { NestFactory } from '@nestjs/core'
+import { AppModule } from './app.module'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+  const app = await NestFactory.create(AppModule)
 
-
-
- //  Enable CORS
+  // Enable CORS for all origins (for development/testing)
   app.enableCors({
-    origin: [
-      'http://localhost:61561', // Flutter web debug server
-      'http://127.0.0.1:54206', // Sometimes Flutter uses 127.0.0.1
-    ],
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
-  });
+  })
+
+  await app.listen(process.env.PORT ?? 3000)
 }
-bootstrap();
+bootstrap()
