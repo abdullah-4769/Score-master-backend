@@ -310,10 +310,8 @@ async getAllSessions() {
     orderBy: { startedAt: 'asc' }
   })
 
-  const now = Date.now()
-
   const scheduledSessions = sessions
-    .filter(s => s.status === 'PENDING' || (s.status === 'ACTIVE' && s.startedAt && s.startedAt.getTime() > now))
+    .filter(s => s.status === 'PENDING')
     .map(s => ({
       id: s.id,
       description: s.gameFormat.description,
@@ -324,23 +322,21 @@ async getAllSessions() {
     }))
 
   const activeSessions = sessions
-    .filter(s => s.status === 'ACTIVE' && s.startedAt && s.startedAt.getTime() <= now)
-    .map(s => {
-      let elapsed = s.elapsedTime
-      if (s.startedAt) elapsed += Math.floor((now - s.startedAt.getTime()) / 1000)
-      const remainingTime = Math.max(s.duration - elapsed, 0)
-      return {
-        id: s.id,
-        description: s.gameFormat.description,
-        sessiontitle: s.description,
-        totalPlayers: s.players.length,
-        totalPhases: s.gameFormat.phases.length,
-        remainingTime
-      }
-    })
+    .filter(s => s.status === 'ACTIVE' || s.status === 'PAUSED')
+    .map(s => ({
+      id: s.id,
+      description: s.gameFormat.description,
+      sessiontitle: s.description,
+      totalPlayers: s.players.length,
+      totalPhases: s.gameFormat.phases.length,
+      status: s.status
+    }))
 
   return { scheduledSessions, activeSessions }
 }
+
+
+
 
 async getSessionsForFacilitator(facilitatorId: number) {
   const sessions = await this.prisma.session.findMany({
@@ -391,19 +387,13 @@ async getAllSessionsWithCode() {
   const sessions = await this.prisma.session.findMany({
     include: {
       gameFormat: { include: { phases: true } },
-      players: true,
+      players: true
     },
-    orderBy: { startedAt: 'asc' },
+    orderBy: { startedAt: 'asc' }
   })
 
-  const now = Date.now()
-
   const scheduledSessions = sessions
-    .filter(
-      s =>
-        s.status === 'PENDING' ||
-        (s.status === 'ACTIVE' && s.startedAt && s.startedAt.getTime() > now),
-    )
+    .filter(s => s.status === 'PENDING')
     .map(s => ({
       id: s.id,
       description: s.gameFormat.description,
@@ -411,32 +401,23 @@ async getAllSessionsWithCode() {
       totalPlayers: s.players.length,
       totalPhases: s.gameFormat.phases.length,
       startTime: s.startedAt,
-      joinCode: s.joinCode,
+      joinCode: s.joinCode
     }))
 
   const activeSessions = sessions
-    .filter(
-      s => s.status === 'ACTIVE' && s.startedAt && s.startedAt.getTime() <= now,
-    )
-    .map(s => {
-      let elapsed = s.elapsedTime
-      if (s.startedAt) {
-        elapsed += Math.floor((now - s.startedAt.getTime()) / 1000)
-      }
-      const remainingTime = Math.max(s.duration - elapsed, 0)
-
-      return {
-        id: s.id,
-        description: s.gameFormat.description,
-        sessiontitle: s.description,
-        totalPlayers: s.players.length,
-        totalPhases: s.gameFormat.phases.length,
-        remainingTime,
-        joinCode: s.joinCode,
-      }
-    })
+    .filter(s => s.status === 'ACTIVE' || s.status === 'PAUSED')
+    .map(s => ({
+      id: s.id,
+      description: s.gameFormat.description,
+      sessiontitle: s.description,
+      totalPlayers: s.players.length,
+      totalPhases: s.gameFormat.phases.length,
+      joinCode: s.joinCode,
+      status: s.status
+    }))
 
   return { scheduledSessions, activeSessions }
 }
+
 
 }
