@@ -16,8 +16,13 @@ async function bootstrap() {
     process.exit(1)
   }
 
+  const server = await app.listen(port)
   
-  await app.listen(port)
+  // Add timeout configuration for Render
+  server.setTimeout(300000); // 5 minutes timeout
+  server.keepAliveTimeout = 300000; // 5 minutes keep-alive
+  
   console.log(`Server is running on port ${port}`)
+  console.log(`Health check available at: http://localhost:${port}/health`)
 }
 bootstrap()
