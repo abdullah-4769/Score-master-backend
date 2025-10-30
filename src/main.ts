@@ -4,13 +4,20 @@ import { AppModule } from './app.module'
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
 
-  // Enable CORS for all origins (for development/testing)
   app.enableCors({
     origin: '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   })
 
-  await app.listen(process.env.PORT ?? 3000)
+  const port = process.env.PORT
+  if (!port) {
+    console.error('PORT not found in environment variables')
+    process.exit(1)
+  }
+
+  
+  await app.listen(port)
+  console.log(`Server is running on port ${port}`)
 }
 bootstrap()

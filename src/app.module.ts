@@ -15,9 +15,9 @@ import { TeamModule } from './team/team.module';
 import { PlayerAnswerModule } from './player-answer/player-answer.module';
 import { EvaluationModule } from "./evaluation/evaluation.module";
 import { ScoreModule } from './score/score.module';
-
+import { AppService } from './app.service'
 import { UserModule } from './user/user.module'
-
+import { AppController } from './app.controller'
 
 @Module({
   imports: [
@@ -35,9 +35,12 @@ import { UserModule } from './user/user.module'
     PlayerAnswerModule,
         ScoreModule,
     EvaluationModule,
-    UserModule
+    UserModule,
 
   ],
-  providers: [PrismaService, JwtService],
+
+    controllers: [AppController],
+
+  providers: [PrismaService, JwtService, AppService],
 })
 export class AppModule { }
