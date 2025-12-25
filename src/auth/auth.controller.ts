@@ -1,11 +1,11 @@
-import { Controller, Post, Body,Get } from '@nestjs/common';
+import { Controller, Post, Body, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('register')
   register(@Body() dto: RegisterDto) {
@@ -21,10 +21,10 @@ export class AuthController {
     return this.authService.getAllFacilitators();
   }
 
-@Get('users')
-getAllUsers() {
-  return this.authService.getAllUsers()
-}
+  @Get('users')
+  getAllUsers() {
+    return this.authService.getAllUsers()
+  }
 
-  
+
 }

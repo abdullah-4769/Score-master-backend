@@ -96,4 +96,9 @@ async create(@Body() dto: CreateSessionDto) {
   }
 
 
+  @Patch(':id/complete')
+async complete(@Param('id', ParseIntPipe) sessionId: number) {
+  return this.sessionService.completeSession(sessionId);
+}
+
 }

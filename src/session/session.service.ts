@@ -420,4 +420,17 @@ async getAllSessionsWithCode() {
 }
 
 
+
+async completeSession(sessionId: number) {
+  const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
+  if (!session) throw new NotFoundException('Session not found');
+  if (session.status === 'COMPLETED') throw new BadRequestException('Session already completed');
+
+  const now = new Date();
+  return this.prisma.session.update({
+    where: { id: sessionId },
+    data: { status: 'COMPLETED', elapsedTime: session.duration, endedAt: now, startedAt: null, pausedAt: null },
+  });
+}
+
 }

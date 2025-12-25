@@ -4,6 +4,40 @@ import { PrismaService } from '../lib/prisma/prisma.service'
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
+  async getUserById(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        createdTeams: true,
+        gameFormats: true
+      }
+    })
+
+    if (!user) throw new BadRequestException('User not found')
+
+    return user
+  }
+
+  async updateUser(userId: number, data: any) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) throw new BadRequestException('User not found')
+
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: data.name,
+        phone: data.phone,
+        language: data.language,
+        role: data.role
+      }
+    })
+  }
+
+
+
 
   async getUserStats(userId: number) {
     const user = await this.prisma.user.findUnique({
