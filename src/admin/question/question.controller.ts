@@ -22,10 +22,11 @@ export class QuestionController {
     return this.service.findOne(id)
   }
 
-  @Patch(':id')
-  async update(@Param('id') id: number, @Body() dto: UpdateQuestionDto) {
-    return this.service.update(id, dto)
-  }
+@Patch(':id')
+async update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateQuestionDto) {
+  return this.service.update(id, dto)
+}
+
 
   @Delete(':id')
   async remove(@Param('id') id: number) {
