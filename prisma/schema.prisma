@@ -17,6 +17,10 @@ model User {
   language   String?
   phone      String?
   role       String?
+  resetOtp        String?
+resetOtpExpiry DateTime?
+
+  suspended  Boolean   @default(false)
   createdAt  DateTime  @default(now())
   gameFormats GameFormat[]
   roleId     Int?  
@@ -56,7 +60,7 @@ model GameFormat {
   updatedAt    DateTime  @updatedAt
   teams Team[]
   createdById  Int
-  createdBy    User      @relation(fields: [createdById], references: [id])
+createdBy  User @relation(fields: [createdById], references: [id], onDelete: Cascade)
   facilitators User[] @relation("GameFormatFacilitators")
  capabilities     PlayerCapability[] 
   phases       Phase[]
@@ -142,7 +146,8 @@ model Session {
   gameFormat     GameFormat        @relation(fields: [gameFormatId], references: [id])
   description    String
   createdById    Int
-  createdBy      User              @relation(fields: [createdById], references: [id])
+createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
 
   joinCode       String            @unique
   joiningLink    String?           // optional link for joining the session
@@ -239,7 +244,8 @@ model Team {
   gameFormatId Int
   gameFormat   GameFormat    @relation(fields: [gameFormatId], references: [id])
   createdById  Int
-  createdBy    User          @relation(fields: [createdById], references: [id])
+createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
   players      TeamPlayer[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
@@ -250,7 +256,8 @@ model TeamPlayer {
   teamId    Int
   team      Team  @relation(fields: [teamId], references: [id])
   playerId  Int
-  player    User  @relation(fields: [playerId], references: [id])
+player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
   joinedAt  DateTime @default(now())
 
   @@unique([teamId, playerId])
@@ -263,10 +270,10 @@ model PlayerAnswer {
   id            Int       @id @default(autoincrement())
 
   playerId      Int
-  player        User      @relation("PlayerAnswers", fields: [playerId], references: [id])
+  player User @relation("PlayerAnswers", fields: [playerId], references: [id], onDelete: Cascade)
 
   facilitatorId Int
-  facilitator   User      @relation("FacilitatedAnswers", fields: [facilitatorId], references: [id])
+facilitator User @relation("FacilitatedAnswers", fields: [facilitatorId], references: [id], onDelete: Cascade)
 
   sessionId     Int
   session       Session   @relation("SessionPlayerAnswers", fields: [sessionId], references: [id])
@@ -298,7 +305,8 @@ model Score {
   question      Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   playerId      Int
-  player        User      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
 
   sessionId     Int
   session       Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)

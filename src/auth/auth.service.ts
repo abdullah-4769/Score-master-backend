@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { Injectable, UnauthorizedException ,BadRequestException} from '@nestjs/common'
 import { PrismaService } from '../lib/prisma/prisma.service'
 import { JwtService } from '../lib/jwt/jwt.service'
 import * as bcrypt from 'bcrypt'
@@ -39,24 +39,29 @@ export class AuthService {
     }
   }
 
-  async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    })
+async login(dto: LoginDto) {
+  const user = await this.prisma.user.findUnique({
+    where: { email: dto.email }
+  })
 
-    if (!user) throw new UnauthorizedException('Invalid credentials')
+  if (!user) throw new UnauthorizedException('Invalid credentials')
 
-    const isMatch = await bcrypt.compare(dto.password, user.password)
-    if (!isMatch) throw new UnauthorizedException('Invalid credentials')
-
-    const roleTitle = user.role || 'User'
-    const token = this.jwtService.sign({ id: user.id, role: roleTitle })
-
-    return {
-      token,
-      user: this.mapUser(user, roleTitle),
-    }
+  if (user.suspended) {
+    throw new UnauthorizedException('Account is suspended')
   }
+
+  const isMatch = await bcrypt.compare(dto.password, user.password)
+  if (!isMatch) throw new UnauthorizedException('Invalid credentials')
+
+  const roleTitle = user.role || 'User'
+  const token = this.jwtService.sign({ id: user.id, role: roleTitle })
+
+  return {
+    token,
+    user: this.mapUser(user, roleTitle)
+  }
+}
+
 
   private async getRoleTitle(roleId: number) {
     const role = await this.prisma.role.findFirst({ where: { id: roleId } })
@@ -98,11 +103,65 @@ async getAllUsers() {
       name: true,
       email: true,
       language: true,
+      suspended: true,
       phone: true,
       role: true
     }
   })
 }
 
+ async requestPasswordReset(email: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email }
+    })
 
+    if (!user) throw new BadRequestException('User not found')
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+
+    await this.prisma.user.update({
+      where: { email },
+      data: {
+        resetOtp: otp,
+        resetOtpExpiry: new Date(Date.now() + 10 * 60 * 1000)
+      }
+    })
+
+    return {
+      message: 'OTP generated',
+      otp
+    }
+  }
+
+  async confirmPasswordReset(email: string, otp: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email }
+    })
+
+    if (!user) throw new BadRequestException('User not found')
+
+    if (!user.resetOtp || user.resetOtp !== otp) {
+      throw new BadRequestException('Invalid OTP')
+    }
+
+if (!user.resetOtpExpiry || user.resetOtpExpiry < new Date()) {
+  throw new BadRequestException('OTP expired')
+}
+
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+    await this.prisma.user.update({
+      where: { email },
+      data: {
+        password: hashedPassword,
+        resetOtp: null,
+        resetOtpExpiry: null
+      }
+    })
+
+    return {
+      message: 'Password reset successful'
+    }
+  }
 }

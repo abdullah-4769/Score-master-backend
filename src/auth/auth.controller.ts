@@ -26,5 +26,18 @@ export class AuthController {
     return this.authService.getAllUsers()
   }
 
+    @Post('request-reset')
+  async requestReset(@Body() body: any) {
+    return this.authService.requestPasswordReset(body.email)
+  }
+
+  @Post('confirm-reset')
+  async confirmReset(@Body() body: any) {
+    return this.authService.confirmPasswordReset(
+      body.email,
+      body.otp,
+      body.newPassword
+    )
+  }
 
 }

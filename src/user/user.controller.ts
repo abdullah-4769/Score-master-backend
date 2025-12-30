@@ -1,4 +1,4 @@
-import { Controller, Get, Param,Patch ,Body} from '@nestjs/common'
+import { Controller, Get,Delete, Param,Patch ,Body} from '@nestjs/common'
 import { UserService } from './user.service'
 
 @Controller('user')
@@ -18,7 +18,10 @@ export class UserController {
     return this.userService.updateUser(Number(id), data)
   }
 
-
+  @Patch(':id/toggle-suspend')
+  async toggleSuspend(@Param('id') id: string) {
+    return this.userService.toggleSuspend(Number(id))
+  }
 
   @Get(':id/stats')
   async getUserStats(@Param('id') id: string) {
@@ -29,6 +32,9 @@ export class UserController {
   async getFacilitatorStats(@Param('id') id: string) {
     return this.userService.getFacilitatorStats(Number(id))
   }
-
+  @Delete(':id')
+  async deleteUser(@Param('id') id: string) {
+    return this.userService.deleteUser(Number(id))
+  }
 
 }

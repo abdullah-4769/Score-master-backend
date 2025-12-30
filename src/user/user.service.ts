@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common'
+import { Injectable, BadRequestException ,NotFoundException} from '@nestjs/common'
 import { PrismaService } from '../lib/prisma/prisma.service'
 
 @Injectable()
@@ -157,6 +157,41 @@ if (role !== 'facilitator' && role !== 'admin') {
     return { playerInfo, sessionStats, user, recentSessions }
   }
 
+async toggleSuspend(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) throw new BadRequestException('User not found')
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        suspended: !user.suspended
+      }
+    })
+
+    return {
+      id: updatedUser.id,
+      suspended: updatedUser.suspended,
+      message: updatedUser.suspended ? 'User suspended' : 'User unsuspended'
+    }
+  }
+
+
+ async deleteUser(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) throw new NotFoundException({ message: 'User not found' })
+
+    await this.prisma.user.delete({
+      where: { id: userId }
+    })
+
+    return { message: 'User account and all related data deleted successfully' }
+  }
 
 
 }
