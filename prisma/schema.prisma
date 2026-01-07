@@ -1,0 +1,338 @@
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") 
+
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         Int       @id @default(autoincrement())
+  email      String    @unique
+  name       String
+  password   String
+  language   String?
+  phone      String?
+  role       String?
+  resetOtp        String?
+resetOtpExpiry DateTime?
+
+  suspended  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  gameFormats GameFormat[]
+  roleId     Int?  
+  sessions  Session[]
+  joinedSessions PlayerSession[]
+    scores Score[] 
+    submittedAnswers PlayerAnswer[] @relation("PlayerAnswers")
+  facilitatedAnswers PlayerAnswer[] @relation("FacilitatedAnswers")
+    teamPlayers TeamPlayer[]   // users can belong to multiple teams
+  createdTeams Team[]        // teams created by user
+   createdGameFormats GameFormat[] @relation("GameFormatFacilitators")
+}
+
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  icon        String?
+  file        String?
+ 
+}
+
+
+
+
+model GameFormat {
+  id           Int       @id @default(autoincrement())
+  name         String
+  description  String?
+  mode         String
+  totalPhases  Int
+  timeDuration Int
+  isPublished  Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  teams Team[]
+  createdById  Int
+  createdBy  User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  facilitators User[] @relation("GameFormatFacilitators")
+ capabilities     PlayerCapability[] 
+  phases       Phase[]
+  sessions  Session[]
+}
+
+
+
+model Phase {
+  id             Int       @id @default(autoincrement())
+  gameFormatId   Int
+  name           String
+  description    String?
+  order          Int?
+  scoringType    ScoringType
+  timeDuration   Int
+  challengeTypes String[]     
+  difficulty     DifficultyLevel
+  badge          String?
+  requiredScore  Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  playerAnswers  PlayerAnswer[] @relation("PhasePlayerAnswers")
+  gameFormat     GameFormat   @relation(fields: [gameFormatId], references: [id])
+  questions      Question[]
+    scores Score[] 
+  phaseSessions  PhaseSession[]
+
+  @@unique([gameFormatId, order])
+  @@index([gameFormatId])
+}
+
+enum ScoringType {
+  AI
+  MANUAL
+  HYBRID
+}
+
+enum DifficultyLevel {
+  EASY
+  MEDIUM
+  HARD
+}
+
+
+
+model Question {
+  id            Int        @id @default(autoincrement())
+  phaseId       Int
+  sessionId        Int
+  session          Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type          QuestionType
+  scenario      String?       // new field: scenario or summary before the question
+  questionText  String?       // optional so type can be added first
+  scoringRubric Json?         // optional at first
+  order         Int?          // optional at first
+  point         Int?          // new field, optional at first
+  mcqOptions    Json?         // new optional field for MCQ options
+  sequenceOptions Json?       // new optional field for sequence/ordered puzzles
+  correctSequence Json?       // correct order for sequence puzzles
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+    scores Score[]
+  playerAnswers PlayerAnswer[] @relation("QuestionPlayerAnswers")
+  phase    Phase    @relation(fields: [phaseId], references: [id])
+  @@unique([phaseId, order])
+  @@index([phaseId])
+}
+
+
+enum QuestionType {
+  MCQ
+  OPEN_ENDED
+  PUZZLE
+  SIMULATION
+}
+
+
+
+
+model Session {
+  id             Int               @id @default(autoincrement())
+  gameFormatId   Int
+  gameFormat     GameFormat        @relation(fields: [gameFormatId], references: [id])
+  description    String
+  createdById    Int
+createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+
+  joinCode       String            @unique
+  joiningLink    String?           // optional link for joining the session
+  status         SessionStatus     @default(PENDING)
+
+  duration       Int
+  elapsedTime    Int               @default(0)
+
+  startedAt      DateTime?
+  pausedAt       DateTime?
+  endedAt        DateTime?
+  scores Score[]
+  players        PlayerSession[]
+  phaseSessions  PhaseSession[] 
+  teams Team[]
+  questions Question[]
+  playerAnswers  PlayerAnswer[] @relation("SessionPlayerAnswers")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+}
+
+enum SessionStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+
+model PlayerCapability {
+  id            Int      @id @default(autoincrement())
+  gameFormatId  Int
+  gameFormat    GameFormat @relation(fields: [gameFormatId], references: [id])
+
+  minPlayers    Int
+  maxPlayers    Int
+  badgeNames    Json?
+
+  requireAllTrue  Boolean   @default(false)
+  aiScoring       Boolean   @default(false)
+  allowLaterJoin  Boolean   @default(true)
+  sendInvitation  Boolean   @default(false)
+  recordSession   Boolean   @default(false)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+
+
+
+
+
+
+model PlayerSession {
+  id        Int      @id @default(autoincrement())
+  sessionId Int
+  session   Session  @relation(fields: [sessionId], references: [id])
+  playerId  Int
+  player    User     @relation(fields: [playerId], references: [id])
+  joinedAt  DateTime @default(now())
+}
+
+
+model PhaseSession {
+  id          Int          @id @default(autoincrement())
+  sessionId   Int
+  session     Session      @relation(fields: [sessionId], references: [id])
+  phaseId     Int       // match Phase.id type
+  phase       Phase        @relation(fields: [phaseId], references: [id])
+
+  status      PhaseStatus  @default(PENDING)
+  timeDuration Int
+  elapsedTime  Int          @default(0)
+
+  startedAt   DateTime?
+  pausedAt    DateTime?
+  endedAt     DateTime?
+
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum PhaseStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+model Team {
+  id           Int           @id @default(autoincrement())
+  nickname     String
+  sessionId    Int
+  session      Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  gameFormatId Int
+  gameFormat   GameFormat    @relation(fields: [gameFormatId], references: [id])
+  createdById  Int
+createdBy User @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  players      TeamPlayer[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model TeamPlayer {
+  id        Int   @id @default(autoincrement())
+  teamId    Int
+  team      Team  @relation(fields: [teamId], references: [id])
+  playerId  Int
+player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  joinedAt  DateTime @default(now())
+
+  @@unique([teamId, playerId])
+}
+
+
+
+
+model PlayerAnswer {
+  id            Int       @id @default(autoincrement())
+
+  playerId      Int
+  player User @relation("PlayerAnswers", fields: [playerId], references: [id], onDelete: Cascade)
+
+  facilitatorId Int
+facilitator User @relation("FacilitatedAnswers", fields: [facilitatorId], references: [id], onDelete: Cascade)
+
+  sessionId     Int
+  session       Session   @relation("SessionPlayerAnswers", fields: [sessionId], references: [id])
+
+  phaseId       Int
+  phase         Phase     @relation("PhasePlayerAnswers", fields: [phaseId], references: [id])
+
+  questionId    Int
+  question      Question  @relation("QuestionPlayerAnswers", fields: [questionId], references: [id])
+
+  answerData        Json?
+  score         Int?
+  feedback      String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([playerId, questionId, sessionId])
+  @@index([sessionId])
+  @@index([phaseId])
+}
+
+
+
+model Score {
+  id            Int       @id @default(autoincrement())
+
+  questionId    Int
+  question      Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  playerId      Int
+player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+
+  sessionId     Int
+  session       Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  phaseId       Int
+  phase         Phase     @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  finalScore        Float
+  relevanceScore    Float
+  suggestion        String
+  qualityAssessment String
+  description       String
+
+  charityScore        Int
+  strategicThinking   Int
+  feasibilityScore    Int
+  innovationScore     Int
+  points              Int
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([questionId])
+  @@index([playerId])
+  @@index([sessionId])
+  @@index([phaseId])
+}
