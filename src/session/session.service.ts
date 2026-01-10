@@ -203,81 +203,114 @@ async joinSession(playerId: number, joinCode: string) {
 
 
 async getSessionDetail(sessionId: number) {
-  let session = await this.prisma.session.findUnique({
-    where: { id: sessionId },
-    include: {
-      gameFormat: true,
-      phaseSessions: { include: { phase: true } },
-      createdBy: { select: { id: true, name: true, role: true } }
-    }
-  })
+  const [session, totalPlayers] = await Promise.all([
+    this.prisma.session.findUnique({
+      where: { id: sessionId },
+      select: {
+        id: true,
+        description: true,
+        joinCode: true,
+        joiningLink: true,
+        status: true,
+        duration: true,
+        elapsedTime: true,
+        startedAt: true,
+        createdAt: true,
+        gameFormat: {
+          select: {
+            description: true,
+            facilitators: {
+              select: { id: true, name: true, role: true }
+            }
+          }
+        },
+        phaseSessions: {
+          select: {
+            id: true,
+            status: true,
+            timeDuration: true,
+            elapsedTime: true,
+            startedAt: true,
+            phase: {
+              select: {
+                id: true,
+                name: true,
+                order: true
+              }
+            }
+          },
+          orderBy: { phase: { order: 'asc' } }
+        },
+        createdBy: {
+          select: { id: true, name: true, role: true }
+        }
+      }
+    }),
+    this.prisma.playerSession.count({ where: { sessionId } })
+  ])
 
   if (!session) throw new NotFoundException('Session not found')
 
-  const players = await this.prisma.playerSession.findMany({
-    where: { sessionId },
-    include: { player: { select: { id: true, name: true } } }
-  })
-  const totalPlayers = players.length
+  const shouldActivate = session.status === 'PENDING' && 
+                         session.startedAt && 
+                         session.startedAt.getTime() <= Date.now()
 
-  if (session.status === 'PENDING' && session.startedAt && session.startedAt.getTime() <= Date.now()) {
-    session = await this.prisma.session.update({
+  if (shouldActivate) {
+    await this.prisma.session.update({
       where: { id: sessionId },
       data: { status: 'ACTIVE', startedAt: session.startedAt || new Date() },
-      include: {
-        gameFormat: true,
-        phaseSessions: { include: { phase: true } },
-        createdBy: { select: { id: true, name: true, role: true } }
-      }
+      select: { id: true }
     })
+    session.status = 'ACTIVE'
   }
 
-  const totalPhases = session.phaseSessions.length
-  const completedPhases = session.phaseSessions.filter(ps => ps.status === 'COMPLETED').length
-  const engagement = totalPhases ? Math.floor((completedPhases / totalPhases) * 100) : 0
-
-  if (session.status === 'PENDING') {
-    return {
-      id: session.id,
-      description: session.gameFormat.description,
-      sessiontitle: session.description,
-      joinCode: session.joinCode,
-      joinLink: session.joiningLink,
-      startTime: session.startedAt,
-      duration: session.duration,
-      totalPlayers,
-      engagement,
-      createdBy: session.createdBy,
-      createdAt: session.createdAt
-    }
-  }
-
+  const now = Date.now()
   let elapsed = session.elapsedTime
+
   if (session.startedAt && session.status === 'ACTIVE') {
-    elapsed += Math.floor((Date.now() - session.startedAt.getTime()) / 1000)
+    elapsed += Math.floor((now - session.startedAt.getTime()) / 1000)
   }
+
   const remainingTime = Math.max(session.duration - elapsed, 0)
 
   let activePhase: { id: number, name: string, status: string, remainingTime: number } | null = null
-  const activePhaseSession = session.phaseSessions.find(ps => ps.status === 'ACTIVE')
 
-  if (activePhaseSession) {
-    let phaseElapsed = activePhaseSession.elapsedTime
-    if (activePhaseSession.startedAt && activePhaseSession.status === 'ACTIVE') {
-      phaseElapsed += Math.floor((Date.now() - activePhaseSession.startedAt.getTime()) / 1000)
-    }
-    activePhase = {
-      id: activePhaseSession.phase.id,
-      name: activePhaseSession.phase.name,
-      status: activePhaseSession.status,
-      remainingTime: Math.max(activePhaseSession.timeDuration - phaseElapsed, 0)
+  if (session.status === 'PENDING') {
+    const firstPhase = session.phaseSessions[0]
+    if (firstPhase) {
+      activePhase = {
+        id: firstPhase.phase.id,
+        name: firstPhase.phase.name,
+        status: 'PENDING',
+        remainingTime: firstPhase.timeDuration
+      }
     }
   } else if (session.status === 'ACTIVE') {
-    activePhase = {
-      id: 0,
-      name: 'Default Phase',
-      status: 'ACTIVE',
-      remainingTime
+    const activePhaseSession = session.phaseSessions.find(ps => ps.status === 'ACTIVE')
+
+    if (activePhaseSession) {
+      let phaseElapsed = activePhaseSession.elapsedTime
+
+      if (activePhaseSession.startedAt) {
+        phaseElapsed += Math.floor((now - activePhaseSession.startedAt.getTime()) / 1000)
+      }
+
+      activePhase = {
+        id: activePhaseSession.phase.id,
+        name: activePhaseSession.phase.name,
+        status: activePhaseSession.status,
+        remainingTime: Math.max(activePhaseSession.timeDuration - phaseElapsed, 0)
+      }
+    } else {
+      const lastPhase = session.phaseSessions[session.phaseSessions.length - 1]
+      if (lastPhase) {
+        activePhase = {
+          id: lastPhase.phase.id,
+          name: lastPhase.phase.name,
+          status: 'COMPLETED',
+          remainingTime: 0
+        }
+      }
     }
   }
 
@@ -290,12 +323,13 @@ async getSessionDetail(sessionId: number) {
     status: session.status,
     remainingTime,
     totalPlayers,
-    engagement,
     activePhase,
     createdBy: session.createdBy,
+    facilitators: session.gameFormat.facilitators,
     createdAt: session.createdAt
   }
 }
+
 
 
 

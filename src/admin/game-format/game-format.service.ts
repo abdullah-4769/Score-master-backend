@@ -96,34 +96,20 @@ async findByFacilitatorId(facilitatorId: number) {
 }
 
 
-  async getGamesSummary() {
-    const games = await this.prisma.gameFormat.findMany({
-      include: { phases: true },
-    });
+async getGamesSummary() {
+  const games = await this.prisma.gameFormat.findMany({
+    where: { isPublished: true },
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      timeDuration: true,
+    },
+  });
 
-    return games.map(game => {
-      const phases = game.phases;
-      let finalScoringType: string;
+  return games;
+}
 
-      if (phases.length === 0) {
-        finalScoringType = 'AUTOMATIC';
-      } else {
-        const firstType = phases[0].scoringType;
-        const allSame = phases.every(p => p.scoringType === firstType);
-        finalScoringType = allSame ? firstType : 'MANUAL';
-      }
-
-      return {
-        name: game.name,
-        description: game.description,
-        mode: game.mode,
-        totalPhases: game.totalPhases,
-        timeDuration: game.timeDuration,
-        isActive: game.isActive,
-        scoringType: finalScoringType,
-      };
-    });
-  }
 
 async findFacilitatorsByGameId(gameId: number) {
   const gameWithFacilitators = await this.prisma.gameFormat.findMany({
