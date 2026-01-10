@@ -84,7 +84,6 @@ async deleteAllAnswers() {
 async getAnswersBySessionAndPhase(sessionId: number, phaseId: number, page: number = 1) {
   const PAGE_SIZE = 10
 
-
   const [phase, answersWithRelations, totalAnswers] = await Promise.all([
     this.prisma.phase.findUnique({ 
       where: { id: phaseId },
@@ -104,6 +103,9 @@ async getAnswersBySessionAndPhase(sessionId: number, phaseId: number, page: numb
     this.prisma.playerAnswer.findMany({
       where: { sessionId, phaseId },
       select: {
+        id: true,
+        playerId: true,
+        questionId: true,
         answerData: true,
         createdAt: true,
         player: {
@@ -134,8 +136,31 @@ async getAnswersBySessionAndPhase(sessionId: number, phaseId: number, page: numb
   ])
 
   if (!phase) throw new Error('Phase not found')
+
+  const playerQuestionPairs = answersWithRelations.map(a => ({
+    playerId: a.playerId,
+    questionId: a.questionId
+  }))
+
+  const scores = playerQuestionPairs.length > 0
+    ? await this.prisma.score.findMany({
+        where: {
+          sessionId,
+          OR: playerQuestionPairs.map(pair => ({
+            playerId: pair.playerId,
+            questionId: pair.questionId
+          }))
+        },
+        select: { playerId: true, questionId: true }
+      })
+    : []
+
+  const scoresSet = new Set(
+    scores.map(s => `${s.playerId}_${s.questionId}`)
+  )
+
   const questionsMap = new Map()
-  
+
   for (const answer of answersWithRelations) {
     const qId = answer.question.id
     
@@ -145,11 +170,12 @@ async getAnswersBySessionAndPhase(sessionId: number, phaseId: number, page: numb
         answers: []
       })
     }
-    
+
     questionsMap.get(qId).answers.push({
       player: answer.player,
       answerData: answer.answerData,
       submittedAt: answer.createdAt,
+      evaluated: scoresSet.has(`${answer.playerId}_${answer.questionId}`)
     })
   }
 
@@ -166,6 +192,7 @@ async getAnswersBySessionAndPhase(sessionId: number, phaseId: number, page: numb
     }
   }
 }
+
 
 
 
