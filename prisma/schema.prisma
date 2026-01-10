@@ -128,6 +128,7 @@ model Question {
   phase    Phase    @relation(fields: [phaseId], references: [id])
   @@unique([phaseId, order])
   @@index([phaseId])
+  @@index([phaseId, order])
 }
 
 
@@ -275,7 +276,7 @@ model PlayerAnswer {
   player User @relation("PlayerAnswers", fields: [playerId], references: [id], onDelete: Cascade)
 
   facilitatorId Int
-facilitator User @relation("FacilitatedAnswers", fields: [facilitatorId], references: [id], onDelete: Cascade)
+  facilitator User @relation("FacilitatedAnswers", fields: [facilitatorId], references: [id], onDelete: Cascade)
 
   sessionId     Int
   session       Session   @relation("SessionPlayerAnswers", fields: [sessionId], references: [id])
@@ -296,6 +297,7 @@ facilitator User @relation("FacilitatedAnswers", fields: [facilitatorId], refere
   @@unique([playerId, questionId, sessionId])
   @@index([sessionId])
   @@index([phaseId])
+   @@index([questionId])
 }
 
 

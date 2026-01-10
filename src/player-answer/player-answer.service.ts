@@ -81,5 +81,94 @@ async deleteAllAnswers() {
   return this.prisma.playerAnswer.deleteMany({})
 }
 
+async getAnswersBySessionAndPhase(sessionId: number, phaseId: number, page: number = 1) {
+  const PAGE_SIZE = 10
+
+
+  const [phase, answersWithRelations, totalAnswers] = await Promise.all([
+    this.prisma.phase.findUnique({ 
+      where: { id: phaseId },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        scoringType: true,
+        timeDuration: true,
+        challengeTypes: true,
+        difficulty: true,
+        badge: true,
+        requiredScore: true,
+      }
+    }),
+    
+    this.prisma.playerAnswer.findMany({
+      where: { sessionId, phaseId },
+      select: {
+        answerData: true,
+        createdAt: true,
+        player: {
+          select: { id: true, name: true }
+        },
+        question: {
+          select: { 
+            id: true, 
+            questionText: true, 
+            scenario: true, 
+            type: true, 
+            point: true,
+            order: true 
+          }
+        }
+      },
+      orderBy: [
+        { question: { order: 'asc' } },
+        { createdAt: 'asc' }
+      ],
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    
+    this.prisma.playerAnswer.count({ 
+      where: { sessionId, phaseId } 
+    }),
+  ])
+
+  if (!phase) throw new Error('Phase not found')
+  const questionsMap = new Map()
+  
+  for (const answer of answersWithRelations) {
+    const qId = answer.question.id
+    
+    if (!questionsMap.has(qId)) {
+      questionsMap.set(qId, {
+        question: answer.question,
+        answers: []
+      })
+    }
+    
+    questionsMap.get(qId).answers.push({
+      player: answer.player,
+      answerData: answer.answerData,
+      submittedAt: answer.createdAt,
+    })
+  }
+
+  return {
+    phase,
+    questions: Array.from(questionsMap.values()),
+    pagination: {
+      currentPage: page,
+      pageSize: PAGE_SIZE,
+      totalItems: totalAnswers,
+      totalPages: Math.ceil(totalAnswers / PAGE_SIZE),
+      hasNext: page * PAGE_SIZE < totalAnswers,
+      hasPrev: page > 1
+    }
+  }
+}
+
+
+
+
 
 }
