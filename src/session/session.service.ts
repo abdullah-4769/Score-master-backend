@@ -37,38 +37,147 @@ async createSession(dto: CreateSessionDto) {
 
 
 
-  async startSession(sessionId: number) {
-    const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
-    if (!session) throw new NotFoundException('Session not found');
-    if (session.status === 'ACTIVE') throw new BadRequestException('Session already active');
-    return this.prisma.session.update({
-      where: { id: sessionId },
-      data: { status: 'ACTIVE', startedAt: new Date(), pausedAt: null },
+async startSession(sessionId: number) {
+  const session = await this.prisma.session.findUnique({
+    where: { id: sessionId },
+    include: {
+      phaseSessions: { include: { phase: true } },
+      gameFormat: { include: { phases: { orderBy: { order: 'asc' } } } }
+    }
+  });
+
+  if (!session) throw new NotFoundException('Session not found');
+  if (session.status === 'ACTIVE') throw new BadRequestException('Session already active');
+
+  await this.prisma.session.update({
+    where: { id: sessionId },
+    data: { status: 'ACTIVE', startedAt: new Date(), pausedAt: null }
+  });
+
+  const phases = session.gameFormat.phases;
+
+  const startPhase = async (phaseIndex: number) => {
+    if (phaseIndex >= phases.length) {
+      await this.prisma.session.update({
+        where: { id: sessionId },
+        data: { status: 'COMPLETED', endedAt: new Date() }
+      });
+
+      const incompletePhases = await this.prisma.phaseSession.findMany({
+        where: { sessionId, status: { not: 'COMPLETED' } }
+      });
+
+      for (const ps of incompletePhases) {
+        await this.prisma.phaseSession.update({
+          where: { id: ps.id },
+          data: { status: 'COMPLETED', endedAt: new Date() }
+        });
+      }
+
+      return;
+    }
+
+    let phaseSession = await this.prisma.phaseSession.findFirst({
+      where: { sessionId, phaseId: phases[phaseIndex].id }
+    });
+
+    if (!phaseSession) {
+      phaseSession = await this.prisma.phaseSession.create({
+        data: {
+          sessionId: session.id,
+          phaseId: phases[phaseIndex].id,
+          status: 'ACTIVE',
+          startedAt: new Date(),
+          timeDuration: phases[phaseIndex].timeDuration,
+          elapsedTime: 0
+        },
+        include: { phase: true }
+      });
+    } else {
+      phaseSession = await this.prisma.phaseSession.update({
+        where: { id: phaseSession.id },
+        data: { status: 'ACTIVE', startedAt: new Date(), pausedAt: null },
+        include: { phase: true }
+      });
+    }
+
+    const remainingTime = phaseSession.timeDuration - (phaseSession.elapsedTime || 0);
+
+    setTimeout(async () => {
+      await this.prisma.phaseSession.update({
+        where: { id: phaseSession.id },
+        data: { status: 'COMPLETED', endedAt: new Date() },
+        include: { phase: true }
+      });
+
+      startPhase(phaseIndex + 1);
+    }, remainingTime * 1000);
+  };
+
+  startPhase(0);
+
+  return { message: 'Session started. Phases will auto-complete in order.' };
+}
+
+
+
+
+
+
+async pauseSession(sessionId: number) {
+  const session = await this.prisma.session.findUnique({
+    where: { id: sessionId },
+    include: { phaseSessions: true }
+  });
+
+  if (!session || session.status !== 'ACTIVE') throw new BadRequestException('Session not active');
+
+  const now = new Date();
+  const sessionElapsed = session.startedAt ? Math.floor((now.getTime() - session.startedAt.getTime()) / 1000) : 0;
+
+  await this.prisma.session.update({
+    where: { id: sessionId },
+    data: { status: 'PAUSED', elapsedTime: session.elapsedTime + sessionElapsed, pausedAt: now, startedAt: null }
+  });
+
+  const activePhase = session.phaseSessions.find(ps => ps.status === 'ACTIVE');
+  if (activePhase && activePhase.startedAt) {
+    const phaseElapsed = Math.floor((now.getTime() - activePhase.startedAt.getTime()) / 1000);
+    await this.prisma.phaseSession.update({
+      where: { id: activePhase.id },
+      data: { status: 'PAUSED', elapsedTime: (activePhase.elapsedTime || 0) + phaseElapsed, pausedAt: now, startedAt: null }
     });
   }
 
-  async pauseSession(sessionId: number) {
-    const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
-    if (!session || session.status !== 'ACTIVE') throw new BadRequestException('Session not active');
+  return { message: 'Session and active phase paused successfully' };
+}
 
-    const now = new Date();
-    const diff = session.startedAt ? Math.floor((now.getTime() - session.startedAt.getTime()) / 1000) : 0;
-    const newElapsed = session.elapsedTime + diff;
+async resumeSession(sessionId: number) {
+  const session = await this.prisma.session.findUnique({
+    where: { id: sessionId },
+    include: { phaseSessions: true }
+  });
 
-    return this.prisma.session.update({
-      where: { id: sessionId },
-      data: { status: 'PAUSED', elapsedTime: newElapsed, pausedAt: now, startedAt: null },
+  if (!session || session.status !== 'PAUSED') throw new BadRequestException('Session not paused');
+
+  const now = new Date();
+
+  await this.prisma.session.update({
+    where: { id: sessionId },
+    data: { status: 'ACTIVE', startedAt: now, pausedAt: null }
+  });
+
+  const pausedPhase = session.phaseSessions.find(ps => ps.status === 'PAUSED');
+  if (pausedPhase) {
+    await this.prisma.phaseSession.update({
+      where: { id: pausedPhase.id },
+      data: { status: 'ACTIVE', startedAt: now, pausedAt: null }
     });
   }
 
-  async resumeSession(sessionId: number) {
-    const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
-    if (!session || session.status !== 'PAUSED') throw new BadRequestException('Session not paused');
-    return this.prisma.session.update({
-      where: { id: sessionId },
-      data: { status: 'ACTIVE', startedAt: new Date(), pausedAt: null },
-    });
-  }
+  return { message: 'Session and paused phase resumed successfully' };
+}
+
 
   async checkAutoComplete(sessionId: number) {
     const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
@@ -165,26 +274,86 @@ async joinSession(playerId: number, joinCode: string) {
     return { sessionId, message: 'Player added to session successfully', readyToJoin: true, remainingTime: await this.getRemainingTime(sessionId) };
   }
 
-  async getSessionProgress(sessionId: number) {
-    const session = await this.prisma.session.findUnique({ where: { id: sessionId }, include: { gameFormat: { include: { phases: { orderBy: { order: 'asc' }, select: { id: true, name: true, order: true, timeDuration: true } } } } } });
-    if (!session) throw new NotFoundException(`Session ${sessionId} not found`);
+async getSessionProgress(sessionId: number) {
+  const session = await this.prisma.session.findUnique({
+    where: { id: sessionId },
+    include: {
+      phaseSessions: { include: { phase: true } },
+      gameFormat: { include: { phases: { orderBy: { order: 'asc' } } } }
+    }
+  });
 
-    let totalElapsed = session.elapsedTime;
-    if (session.status === 'ACTIVE' && session.startedAt) totalElapsed += (Date.now() - session.startedAt.getTime()) / 1000;
+  if (!session) throw new NotFoundException('Session not found');
 
-    let phaseStart = 0;
-    let currentPhase: any = null;
-    for (const phase of session.gameFormat.phases) {
-      const phaseEnd = phaseStart + phase.timeDuration;
-      if (totalElapsed < phaseEnd) {
-        currentPhase = { id: phase.id.toString(), name: phase.name, order: phase.order ?? 0, duration: phase.timeDuration, elapsed: totalElapsed - phaseStart, remaining: phaseEnd - totalElapsed };
-        break;
+  const now = new Date().getTime();
+
+  const phases = session.gameFormat.phases.map(phase => {
+    let phaseSession = session.phaseSessions.find(ps => ps.phaseId === phase.id);
+
+    let status = 'PENDING';
+    let elapsedTime = 0;
+    let remainingTime = phase.timeDuration;
+
+    if (phaseSession) {
+      status = phaseSession.status;
+
+      if (status === 'ACTIVE' && phaseSession.startedAt) {
+        elapsedTime = Math.floor((now - phaseSession.startedAt.getTime()) / 1000) + (phaseSession.elapsedTime || 0);
+        remainingTime = Math.max(phase.timeDuration - elapsedTime, 0);
+      } else if (status === 'COMPLETED') {
+        elapsedTime = phase.timeDuration;
+        remainingTime = 0;
+      } else {
+        elapsedTime = phaseSession.elapsedTime || 0;
+        remainingTime = Math.max(phase.timeDuration - elapsedTime, 0);
       }
-      phaseStart = phaseEnd;
     }
 
-    return { id: session.id, status: session.status, totalElapsed: Math.floor(totalElapsed), totalDuration: session.duration, gameFormat: { id: session.gameFormat.id, name: session.gameFormat.name, description: session.gameFormat.description, totalPhases: session.gameFormat.phases.length, phases: session.gameFormat.phases }, currentPhase };
-  }
+    return {
+      phaseId: phase.id,
+      name: phase.name,
+      order: phase.order,
+      status,
+      totalTime: phase.timeDuration,
+      elapsedTime,
+      remainingTime
+    };
+  });
+
+  const totalTime = phases.reduce((acc, p) => acc + (p.totalTime || 0), 0);
+  const totalRemainingTime = phases.reduce((acc, p) => acc + (p.remainingTime || 0), 0);
+
+  return {
+    sessionId: session.id,
+    status: session.status,
+    totalTime,
+    totalRemainingTime,
+    phases
+  };
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   async autoJoinSession(playerId: number, sessionId: number) {
     const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
@@ -213,36 +382,18 @@ async getSessionDetail(sessionId: number) {
         joiningLink: true,
         status: true,
         duration: true,
-        elapsedTime: true,
-        startedAt: true,
         createdAt: true,
         gameFormat: {
           select: {
             description: true,
             facilitators: {
-              select: { id: true, name: true, role: true }
-            }
+              select: { id: true, name: true, email: true, role: true }
+            },
+            phases: { select: { id: true } }
           }
         },
-        phaseSessions: {
-          select: {
-            id: true,
-            status: true,
-            timeDuration: true,
-            elapsedTime: true,
-            startedAt: true,
-            phase: {
-              select: {
-                id: true,
-                name: true,
-                order: true
-              }
-            }
-          },
-          orderBy: { phase: { order: 'asc' } }
-        },
         createdBy: {
-          select: { id: true, name: true, role: true }
+          select: { id: true, name: true, email: true ,role:true }
         }
       }
     }),
@@ -251,84 +402,23 @@ async getSessionDetail(sessionId: number) {
 
   if (!session) throw new NotFoundException('Session not found')
 
-  const shouldActivate = session.status === 'PENDING' && 
-                         session.startedAt && 
-                         session.startedAt.getTime() <= Date.now()
-
-  if (shouldActivate) {
-    await this.prisma.session.update({
-      where: { id: sessionId },
-      data: { status: 'ACTIVE', startedAt: session.startedAt || new Date() },
-      select: { id: true }
-    })
-    session.status = 'ACTIVE'
-  }
-
-  const now = Date.now()
-  let elapsed = session.elapsedTime
-
-  if (session.startedAt && session.status === 'ACTIVE') {
-    elapsed += Math.floor((now - session.startedAt.getTime()) / 1000)
-  }
-
-  const remainingTime = Math.max(session.duration - elapsed, 0)
-
-  let activePhase: { id: number, name: string, status: string, remainingTime: number } | null = null
-
-  if (session.status === 'PENDING') {
-    const firstPhase = session.phaseSessions[0]
-    if (firstPhase) {
-      activePhase = {
-        id: firstPhase.phase.id,
-        name: firstPhase.phase.name,
-        status: 'PENDING',
-        remainingTime: firstPhase.timeDuration
-      }
-    }
-  } else if (session.status === 'ACTIVE') {
-    const activePhaseSession = session.phaseSessions.find(ps => ps.status === 'ACTIVE')
-
-    if (activePhaseSession) {
-      let phaseElapsed = activePhaseSession.elapsedTime
-
-      if (activePhaseSession.startedAt) {
-        phaseElapsed += Math.floor((now - activePhaseSession.startedAt.getTime()) / 1000)
-      }
-
-      activePhase = {
-        id: activePhaseSession.phase.id,
-        name: activePhaseSession.phase.name,
-        status: activePhaseSession.status,
-        remainingTime: Math.max(activePhaseSession.timeDuration - phaseElapsed, 0)
-      }
-    } else {
-      const lastPhase = session.phaseSessions[session.phaseSessions.length - 1]
-      if (lastPhase) {
-        activePhase = {
-          id: lastPhase.phase.id,
-          name: lastPhase.phase.name,
-          status: 'COMPLETED',
-          remainingTime: 0
-        }
-      }
-    }
-  }
+  const totalPhases = session.gameFormat.phases.length
 
   return {
     id: session.id,
     description: session.gameFormat.description,
-    sessiontitle: session.description,
+    sessionTitle: session.description,
     joinCode: session.joinCode,
     joinLink: session.joiningLink,
     status: session.status,
-    remainingTime,
     totalPlayers,
-    activePhase,
+    totalPhases,
     createdBy: session.createdBy,
     facilitators: session.gameFormat.facilitators,
     createdAt: session.createdAt
   }
 }
+
 
 
 
@@ -456,15 +546,32 @@ async getAllSessionsWithCode() {
 
 
 async completeSession(sessionId: number) {
-  const session = await this.prisma.session.findUnique({ where: { id: sessionId } });
+  const session = await this.prisma.session.findUnique({
+    where: { id: sessionId },
+    include: { phaseSessions: true }
+  });
+
   if (!session) throw new NotFoundException('Session not found');
   if (session.status === 'COMPLETED') throw new BadRequestException('Session already completed');
 
   const now = new Date();
-  return this.prisma.session.update({
+
+  await this.prisma.session.update({
     where: { id: sessionId },
-    data: { status: 'COMPLETED', elapsedTime: session.duration, endedAt: now, startedAt: null, pausedAt: null },
+    data: { status: 'COMPLETED', elapsedTime: session.duration, endedAt: now, startedAt: null, pausedAt: null }
   });
+
+  const incompletePhases = session.phaseSessions.filter(ps => ps.status !== 'COMPLETED');
+
+  for (const ps of incompletePhases) {
+    await this.prisma.phaseSession.update({
+      where: { id: ps.id },
+      data: { status: 'COMPLETED', elapsedTime: ps.timeDuration, endedAt: now, startedAt: null, pausedAt: null }
+    });
+  }
+
+  return { message: 'Session and all phases completed successfully' };
 }
+
 
 }

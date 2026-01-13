@@ -25,4 +25,7 @@ export class PhaseSessionController {
   async status(@Param('id') id: string) {
     return this.service.getStatus(Number(id));
   }
+
+
+
 }

@@ -38,7 +38,7 @@ export class GameFormatController {
 
   @Patch(':id/publish')
   async publish(@Param('id') id: string) {
-    return await this.gameFormatService.publish(Number(id));
+    return await this.gameFormatService.togglePublish(Number(id));
   }
 
 @Get('facilitator/:id')

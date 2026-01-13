@@ -60,10 +60,11 @@ async create(@Body() dto: CreateSessionDto) {
     return this.sessionService.addPlayerToSession(userId, +sessionId);
   }
 
-  @Get(':id/progress')
-  async progress(@Param('id', ParseIntPipe) id: number) {
-    return this.sessionService.getSessionProgress(id);
-  }
+@Get(':id/progress')
+async getSessionProgress(@Param('id', ParseIntPipe) sessionId: number) {
+  return this.sessionService.getSessionProgress(sessionId);
+}
+
 
   @Post(':id/auto-join')
   async autoJoin(@Param('id', ParseIntPipe) sessionId: number, @Body('playerId') playerId: number) {

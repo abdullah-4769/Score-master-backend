@@ -70,30 +70,37 @@ export class GameFormatService {
     });
   }
 
-  async publish(id: number) {
+  async togglePublish(id: number) {
+    const gameFormat = await this.prisma.gameFormat.findUnique({ where: { id } })
+    if (!gameFormat) throw new NotFoundException('Game format not found')
+
     return this.prisma.gameFormat.update({
       where: { id },
-      data: { isPublished: true },
-    });
+      data: {
+        isPublished: !gameFormat.isPublished
+      }
+    })
   }
 
 async findByFacilitatorId(facilitatorId: number) {
   return this.prisma.gameFormat.findMany({
     where: {
+      isPublished: true,
       facilitators: {
         some: {
           id: facilitatorId
         }
       }
     },
-    include: {
-      createdBy: true,
-      facilitators: { 
-        where: { id: facilitatorId } 
-      }
+    select: {
+      id: true,
+      name: true,
+      description: true,
+      timeDuration: true
     }
   })
 }
+
 
 
 async getGamesSummary() {
@@ -125,7 +132,6 @@ async findFacilitatorsByGameId(gameId: number) {
 
   return gameWithFacilitators[0].facilitators;
 }
-
 
 
 
