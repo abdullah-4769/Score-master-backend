@@ -312,6 +312,7 @@ async getSessionProgress(sessionId: number) {
     return {
       phaseId: phase.id,
       name: phase.name,
+      description: phase.description,
       order: phase.order,
       status,
       totalTime: phase.timeDuration,
