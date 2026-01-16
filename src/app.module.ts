@@ -18,9 +18,11 @@ import { ScoreModule } from './score/score.module';
 import { AppService } from './app.service'
 import { UserModule } from './user/user.module'
 import { AppController } from './app.controller'
+import { AgoraModule } from './agora/agora.module'
 
 @Module({
   imports: [
+    AgoraModule,
     AuthModule,
     RoleModule,
     GameFormatModule,

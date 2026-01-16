@@ -142,34 +142,53 @@ async generate(dto: {
       })),
     }
   }
- async getQuestionsForSession(gameFormatId: number, sessionId: number) {
-    // Check if session exists
-    const session = await this.prisma.session.findUnique({
-      where: { id: sessionId },
-    })
 
-    if (!session) throw new NotFoundException('Session not found')
 
-    // Check if session is active
-    if (session.status !== 'ACTIVE') {
-      throw new BadRequestException('Session is not active')
-    }
 
-    // Fetch all phases of the game format with questions
-    const phases = await this.prisma.phase.findMany({
-      where: { gameFormatId },
-      include: {
-        questions: true, // include all questions
-      },
-      orderBy: { order: 'asc' },
-    })
+  
+async getQuestionsForPhase(sessionId: number, phaseId: number) {
+  const session = await this.prisma.session.findUnique({
+    where: { id: sessionId },
+  })
 
-    return {
-      sessionId: session.id,
-      gameFormatId,
-      phases,
-    }
+  if (!session) throw new NotFoundException('Session not found')
+  if (session.status !== 'ACTIVE') throw new BadRequestException('Session is not active')
+
+  const questions = await this.prisma.question.findMany({
+    where: {
+      sessionId,
+      phaseId
+    },
+    orderBy: { order: 'asc' }
+  })
+
+  if (questions.length === 0) {
+    throw new NotFoundException('No questions found for this phase in this session')
   }
+
+  return {
+    sessionId: session.id,
+    phaseId,
+    questions
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 async getGameFormatBySession(sessionId: number) {
   const session = await this.prisma.session.findUnique({

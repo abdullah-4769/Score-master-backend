@@ -51,13 +51,14 @@ async remove(@Param('id') id: string) {
   async getTeamPhaseWithQuestions(@Param('gameId', ParseIntPipe) gameId: number) {
     return this.service.findTeamPhaseWithQuestions(gameId)
   }
-  @Get('questions-for-session/:gameFormatId/:sessionId')
-  async getQuestions(
-    @Param('gameFormatId', ParseIntPipe) gameFormatId: number,
-    @Param('sessionId', ParseIntPipe) sessionId: number,
-  ) {
-    return this.service.getQuestionsForSession(gameFormatId, sessionId)
-  }
+@Get('questions-for-session/:sessionId/phase/:phaseId')
+async getQuestions(
+  @Param('sessionId', ParseIntPipe) sessionId: number,
+  @Param('phaseId', ParseIntPipe) phaseId: number
+) {
+  return this.service.getQuestionsForPhase(sessionId, phaseId)
+}
+
 
 
 @Get('session/:id/game-format')

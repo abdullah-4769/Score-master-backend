@@ -118,7 +118,11 @@ async getAnswersBySessionAndPhase(sessionId: number, phaseId: number, page: numb
             scenario: true, 
             type: true, 
             point: true,
-            order: true 
+            order: true,
+            mcqOptions: true,
+            sequenceOptions: true,
+            correctSequence: true,
+
           }
         }
       },

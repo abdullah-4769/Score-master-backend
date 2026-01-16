@@ -338,3 +338,17 @@ player User @relation(fields: [playerId], references: [id], onDelete: Cascade)
   @@index([sessionId])
   @@index([phaseId])
 }
+
+
+
+model AgoraSession {
+  id             Int      @id @default(autoincrement())
+  channelName    String   @unique
+  hostUid        Int
+  startTime      DateTime?
+  scheduledAt    DateTime?
+  durationInHours Int?
+  isActive       Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+}
+
