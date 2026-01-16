@@ -3,13 +3,15 @@ import { EvaluateQuestionDto } from "../../evaluation/dto/evaluate-question.dto"
 export function evaluationPrompt(dto: EvaluateQuestionDto) {
   return `
 You are an evaluator AI.
-Your job is to assess a player's answer to a question.
+Your job is to assess a player's answer based on structured JSON data.
 Always return only valid JSON, no explanations or extra text outside JSON.
 
-Details:
-Scenario: ${dto.scenario || "N/A"}
-Question: ${dto.questionText}
-Player Answer: ${dto.playerAnswer}
+Question JSON:
+${JSON.stringify(dto.question, null, 2)}
+
+Answer JSON:
+${JSON.stringify(dto.answer, null, 2)}
+
 Language: ${dto.language}
 
 Instructions:
@@ -19,7 +21,7 @@ Instructions:
 - "qualityAssessment" must be exactly "high", "average", or "low"
 - "description" should briefly explain why the score was given
 - "scoreBreakdown" must contain 4 fields each scored as "x/25"
-- "feedback" should give a simple improvement tip in one one paragraph of 20 words
+- "feedback" should give a simple improvement tip in one paragraph of 20 words
 - give responses in the language specified by the "language" field
 
 Respond ONLY in valid JSON with this structure:

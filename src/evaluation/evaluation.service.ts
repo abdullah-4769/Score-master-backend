@@ -9,7 +9,9 @@ export class EvaluationService {
   async evaluate(dto: EvaluateQuestionDto) {
     const prompt = evaluationPrompt(dto)
 
-    const response = await llm.call([new HumanMessage(prompt)])
+    const response = await llm.call([
+      new HumanMessage(prompt)
+    ])
 
     const cleaned = response.text
       .trim()
@@ -18,10 +20,10 @@ export class EvaluationService {
 
     try {
       return JSON.parse(cleaned)
-    } catch (e) {
+    } catch {
       return {
         error: "Failed to parse AI evaluation",
-        raw: cleaned,
+        raw: cleaned
       }
     }
   }
