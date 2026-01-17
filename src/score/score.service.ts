@@ -254,5 +254,88 @@ async getPlayerRankingByPhase(sessionId: number, phaseId: number) {
     }
   }
 
+async getUserSessionScores(userId: number, sessionId: number) {
+  const [user, session] = await Promise.all([
+    this.prisma.user.findUnique({ where: { id: userId } }),
+    this.prisma.session.findUnique({ where: { id: sessionId } })
+  ])
+
+  if (!user) throw new NotFoundException('User not found')
+  if (!session) throw new NotFoundException('Session not found')
+
+  const questions = await this.prisma.question.findMany({
+    where: { sessionId },
+    select: { id: true, type: true }
+  })
+
+  const totalQuestions = questions.length
+
+  const answers = await this.prisma.playerAnswer.findMany({
+    where: { playerId: userId, sessionId },
+    select: { questionId: true }
+  })
+
+  const totalSubmitted = answers.length
+
+  const answerQuestionIds = answers.map(a => a.questionId)
+
+  const scores = await this.prisma.score.findMany({
+    where: {
+      playerId: userId,
+      sessionId,
+      questionId: { in: answerQuestionIds }
+    },
+    select: { questionId: true, points: true, suggestion: true }
+  })
+
+  const totalScored = scores.length
+
+  const scoreMap = scores.reduce((acc, s) => {
+    acc[s.questionId] = { score: s.points, suggestion: s.suggestion }
+    return acc
+  }, {} as Record<number, { score: number; suggestion: string }>)
+
+  const resultScores = questions.map(q => {
+    const userAnswer = answers.find(a => a.questionId === q.id)
+    if (userAnswer) {
+      if (scoreMap[q.id]) {
+        return {
+          questionId: q.id,
+          type: q.type,
+          submitted: true,
+          scored: true,
+          score: scoreMap[q.id].score,
+          suggestion: scoreMap[q.id].suggestion
+        }
+      } else {
+        return {
+          questionId: q.id,
+          type: q.type,
+          submitted: true,
+          scored: false,
+          message: 'Your answer has been received but is pending evaluation.'
+        }
+      }
+    } else {
+      return {
+        questionId: q.id,
+        type: q.type,
+        submitted: false,
+        scored: false,
+        message: 'You have not submitted an answer for this question yet.'
+      }
+    }
+  })
+
+  return {
+    session: { id: session.id, description: session.description },
+    totalQuestions,
+    totalSubmitted,
+    totalScored,
+    scores: resultScores
+  }
+}
+
+
 
 }

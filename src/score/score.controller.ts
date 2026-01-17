@@ -72,4 +72,18 @@ getPlayerRankingByPhase(
   }
 
 
+
+  @Get('player/:playerId/session/:sessionId/scores')
+getUserSessionScores(
+  @Param('playerId') playerId: string,
+  @Param('sessionId') sessionId: string
+) {
+  return this.scoreService.getUserSessionScores(
+    Number(playerId),
+    Number(sessionId)
+  )
+}
+
+
+
 }
