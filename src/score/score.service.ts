@@ -263,49 +263,39 @@ async getUserSessionScores(userId: number, sessionId: number) {
   if (!user) throw new NotFoundException('User not found')
   if (!session) throw new NotFoundException('Session not found')
 
-  const questions = await this.prisma.question.findMany({
-    where: { sessionId },
-    select: { id: true, type: true }
-  })
+  const [questions, answers, scores] = await Promise.all([
+    this.prisma.question.findMany({
+      where: { sessionId },
+      select: { id: true, type: true }
+    }),
+    this.prisma.playerAnswer.findMany({
+      where: { playerId: userId, sessionId },
+      select: { questionId: true }
+    }),
+    this.prisma.score.findMany({
+      where: { playerId: userId, sessionId },
+      select: { questionId: true, points: true, suggestion: true }
+    })
+  ])
 
   const totalQuestions = questions.length
-
-  const answers = await this.prisma.playerAnswer.findMany({
-    where: { playerId: userId, sessionId },
-    select: { questionId: true }
-  })
-
   const totalSubmitted = answers.length
-
-  const answerQuestionIds = answers.map(a => a.questionId)
-
-  const scores = await this.prisma.score.findMany({
-    where: {
-      playerId: userId,
-      sessionId,
-      questionId: { in: answerQuestionIds }
-    },
-    select: { questionId: true, points: true, suggestion: true }
-  })
-
   const totalScored = scores.length
 
-  const scoreMap = scores.reduce((acc, s) => {
-    acc[s.questionId] = { score: s.points, suggestion: s.suggestion }
-    return acc
-  }, {} as Record<number, { score: number; suggestion: string }>)
+  const answerQuestionIds = new Set(answers.map(a => a.questionId))
+  const scoreMap = new Map(scores.map(s => [s.questionId, { score: s.points, suggestion: s.suggestion }]))
 
   const resultScores = questions.map(q => {
-    const userAnswer = answers.find(a => a.questionId === q.id)
-    if (userAnswer) {
-      if (scoreMap[q.id]) {
+    if (answerQuestionIds.has(q.id)) {
+      const scoreData = scoreMap.get(q.id)
+      if (scoreData) {
         return {
           questionId: q.id,
           type: q.type,
           submitted: true,
           scored: true,
-          score: scoreMap[q.id].score,
-          suggestion: scoreMap[q.id].suggestion
+          score: scoreData.score,
+          suggestion: scoreData.suggestion
         }
       } else {
         return {
