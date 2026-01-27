@@ -148,18 +148,11 @@ async generate(dto: {
   
 async getQuestionsForPhase(sessionId: number, phaseId: number) {
   const session = await this.prisma.session.findUnique({
-    where: { id: sessionId }
+    where: { id: sessionId },
   })
 
   if (!session) throw new NotFoundException('Session not found')
   if (session.status !== 'ACTIVE') throw new BadRequestException('Session is not active')
-
-  const phase = await this.prisma.phase.findUnique({
-    where: { id: phaseId },
-    select: { timeDuration: true }
-  })
-
-  if (!phase) throw new NotFoundException('Phase not found')
 
   const questions = await this.prisma.question.findMany({
     where: {
@@ -174,9 +167,8 @@ async getQuestionsForPhase(sessionId: number, phaseId: number) {
   }
 
   return {
-    sessionId,
+    sessionId: session.id,
     phaseId,
-    phaseTime: phase.timeDuration,
     questions
   }
 }
@@ -259,6 +251,80 @@ async getQuestionsBySession(sessionId: number) {
       correctSequence: q.correctSequence
     }))
   }))
+}
+async getQuestionsForSessionModel(sessionId: number, phaseId: number) {
+  const session = await this.prisma.session.findUnique({
+    where: { id: sessionId },
+    include: {
+      gameFormat: {
+        include: {
+          phases: {
+            where: { id: phaseId },
+            orderBy: { order: 'asc' },
+            include: {
+              questions: {
+                where: { sessionId },
+                orderBy: { order: 'asc' }
+              }
+            }
+          }
+        }
+      }
+    }
+  })
+
+  if (!session) throw new NotFoundException('Session not found')
+
+  return {
+    sessionId: session.id,
+    gameFormatId: session.gameFormat.id,
+    phases: session.gameFormat.phases.map(phase => ({
+      id: phase.id,
+      gameFormatId: phase.gameFormatId,
+      name: phase.name,
+      description: phase.description ?? '',
+      order: phase.order ?? 0,
+      scoringType: phase.scoringType,
+      timeDuration: phase.timeDuration,
+      challengeTypes: phase.challengeTypes,
+      difficulty: phase.difficulty,
+      badge: phase.badge ?? '',
+      requiredScore: phase.requiredScore ?? 0,
+      createdAt: phase.createdAt,
+      updatedAt: phase.updatedAt,
+      questions: phase.questions.map(q => {
+        const rubric = q.scoringRubric as any
+
+        let correct = 0
+
+        if (rubric && typeof rubric === 'object') {
+          const values = Object.values(rubric).filter(v => typeof v === 'number')
+          if (values.length > 0) {
+            correct = Math.max(...values)
+          }
+        }
+
+        return {
+          id: q.id,
+          phaseId: q.phaseId,
+          type: q.type,
+          scenario: q.scenario ?? '',
+          questionText: q.questionText ?? '',
+          scoringRubric: {
+            wrong: 0,
+            correct: correct
+          },
+          order: q.order ?? 0,
+          point: q.point ?? correct,
+          mcqOptions: q.mcqOptions,
+          sequenceOptions: q.sequenceOptions,
+          correctSequence: q.correctSequence,
+          createdAt: q.createdAt,
+          updatedAt: q.updatedAt
+        }
+      })
+    }))
+  }
 }
 
 

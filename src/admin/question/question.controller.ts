@@ -71,5 +71,12 @@ async getQuestionsBySession(@Param('sessionId') sessionId: number) {
   return this.service.getQuestionsBySession(+sessionId)
 }
 
+@Get('questions-for-session/:sessionId/:phaseId')
+async getQuestionsForSession(
+  @Param('sessionId', ParseIntPipe) sessionId: number,
+  @Param('phaseId', ParseIntPipe) phaseId: number
+) {
+  return this.service.getQuestionsForSessionModel(sessionId, phaseId)
+}
 
 }
