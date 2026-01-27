@@ -148,11 +148,18 @@ async generate(dto: {
   
 async getQuestionsForPhase(sessionId: number, phaseId: number) {
   const session = await this.prisma.session.findUnique({
-    where: { id: sessionId },
+    where: { id: sessionId }
   })
 
   if (!session) throw new NotFoundException('Session not found')
   if (session.status !== 'ACTIVE') throw new BadRequestException('Session is not active')
+
+  const phase = await this.prisma.phase.findUnique({
+    where: { id: phaseId },
+    select: { timeDuration: true }
+  })
+
+  if (!phase) throw new NotFoundException('Phase not found')
 
   const questions = await this.prisma.question.findMany({
     where: {
@@ -167,8 +174,9 @@ async getQuestionsForPhase(sessionId: number, phaseId: number) {
   }
 
   return {
-    sessionId: session.id,
+    sessionId,
     phaseId,
+    phaseTime: phase.timeDuration,
     questions
   }
 }
