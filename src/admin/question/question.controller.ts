@@ -71,12 +71,13 @@ async getQuestionsBySession(@Param('sessionId') sessionId: number) {
   return this.service.getQuestionsBySession(+sessionId)
 }
 
-@Get('questions-for-session/:sessionId/:phaseId')
+@Get('questions-for-session/:gameFormatId/:sessionId')
 async getQuestionsForSession(
-  @Param('sessionId', ParseIntPipe) sessionId: number,
-  @Param('phaseId', ParseIntPipe) phaseId: number
+  @Param('gameFormatId', ParseIntPipe) gameFormatId: number,
+  @Param('sessionId', ParseIntPipe) sessionId: number
 ) {
-  return this.service.getQuestionsForSessionModel(sessionId, phaseId)
+  return this.service.getQuestionsForSessionModel(gameFormatId, sessionId)
 }
+
 
 }

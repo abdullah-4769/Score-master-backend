@@ -252,14 +252,15 @@ async getQuestionsBySession(sessionId: number) {
     }))
   }))
 }
-async getQuestionsForSessionModel(sessionId: number, phaseId: number) {
-  const session = await this.prisma.session.findUnique({
-    where: { id: sessionId },
+
+
+async getQuestionsForSessionModel(gameFormatId: number, sessionId: number) {
+  const session = await this.prisma.session.findFirst({
+    where: { id: sessionId, gameFormatId },
     include: {
       gameFormat: {
         include: {
           phases: {
-            where: { id: phaseId },
             orderBy: { order: 'asc' },
             include: {
               questions: {
@@ -294,16 +295,11 @@ async getQuestionsForSessionModel(sessionId: number, phaseId: number) {
       updatedAt: phase.updatedAt,
       questions: phase.questions.map(q => {
         const rubric = q.scoringRubric as any
-
         let correct = 0
-
         if (rubric && typeof rubric === 'object') {
           const values = Object.values(rubric).filter(v => typeof v === 'number')
-          if (values.length > 0) {
-            correct = Math.max(...values)
-          }
+          if (values.length > 0) correct = Math.max(...values)
         }
-
         return {
           id: q.id,
           phaseId: q.phaseId,
@@ -326,6 +322,7 @@ async getQuestionsForSessionModel(sessionId: number, phaseId: number) {
     }))
   }
 }
+
 
 
 
